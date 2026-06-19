@@ -17,13 +17,16 @@ Edits (status changes, dietary notes, added people) save automatically to your
 browser via `localStorage`. Use **Reset to original data** to restore the seed.
 
 ## What it shows
-- **Summary stats** — going / maybe / awaiting reply / declined, plus a live
-  headcount (adults + kids) computed from everyone marked *Going*.
-- **Dietary & allergies board** — consolidated list for the caterer.
-- **Still waiting on** — everyone who hasn't responded yet.
-- **All invitees** — filterable cards; change anyone's status or dietary note inline.
+- **KPI bar** — live metrics: total RSVP'd (of invited), pending replies, attending
+  adults, attending kids, and how many guests have dietary needs.
+- **Collapsible name list** — each row shows the name, RSVP status, +1 party size,
+  and a ⚠️ dietary indicator. Tap a row to expand and edit status, adult/kid
+  counts (steppers), and dietary restrictions inline. Filter by Going / Maybe /
+  Pending / Declined.
 - **Export for caterer** — one tap builds a clean summary (headcount + allergies +
   confirmed-guest list) you can copy to the clipboard or download as a `.txt`.
+
+All edits auto-save to your browser; **Reset data** restores the screenshot seed.
 
 ## Data source & reconciliation
 Seeded from the calendar invite (17 invitees + organizer Leon Pan) and reconciled
