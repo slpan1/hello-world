@@ -22,6 +22,8 @@ browser via `localStorage`. Use **Reset to original data** to restore the seed.
 - **Dietary & allergies board** — consolidated list for the caterer.
 - **Still waiting on** — everyone who hasn't responded yet.
 - **All invitees** — filterable cards; change anyone's status or dietary note inline.
+- **Export for caterer** — one tap builds a clean summary (headcount + allergies +
+  confirmed-guest list) you can copy to the clipboard or download as a `.txt`.
 
 ## Data source & reconciliation
 Seeded from the calendar invite (17 invitees + organizer Leon Pan) and reconciled

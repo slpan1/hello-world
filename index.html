@@ -84,6 +84,27 @@
   .btn-reset:hover{border-color:var(--no);color:var(--no)}
   .btn-add{background:var(--accent);border:none;color:#fff;border-radius:8px;padding:7px 14px;font-size:13px;
     font-weight:600;cursor:pointer}
+  .btn-export{margin-left:auto;background:rgba(91,140,255,.14);border:1px solid rgba(91,140,255,.4);
+    color:var(--accent);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;
+    letter-spacing:0;text-transform:none}
+  .btn-export:hover{background:rgba(91,140,255,.24)}
+
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;
+    padding:16px;z-index:50}
+  .modal.open{display:flex}
+  .modal-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:100%;max-width:560px;
+    max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .modal-head h2{font-size:15px;margin:0}
+  .modal-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1}
+  .modal textarea{flex:1;min-height:200px;background:var(--bg);color:var(--txt);border:none;padding:14px 16px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.5;resize:none;outline:none}
+  .modal-foot{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line);flex-wrap:wrap}
+  .modal-foot button{flex:1;min-width:120px;border-radius:8px;padding:10px;font-size:13px;font-weight:600;cursor:pointer}
+  .modal-foot .primary{background:var(--accent);border:none;color:#fff}
+  .modal-foot .ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
+  .copied{color:var(--yes);font-size:12px;align-self:center;flex:0 0 auto;display:none}
+  .copied.show{display:inline}
   .add-form{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:10px;display:none;
     grid-template-columns:1fr 1fr;gap:8px}
   .add-form.open{display:grid}
@@ -141,7 +162,8 @@
 
   <div class="stats" id="stats"></div>
 
-  <div class="section-title">🍽️ Dietary &amp; allergies <span class="count" id="dietCount">0</span></div>
+  <div class="section-title">🍽️ Dietary &amp; allergies <span class="count" id="dietCount">0</span>
+    <button class="btn-export" id="exportBtn">📤 Export for caterer</button></div>
   <div class="diet-board" id="dietBoard"></div>
 
   <div class="section-title">⏳ Still waiting on <span class="count" id="waitCount">0</span></div>
@@ -173,6 +195,21 @@
     <div class="row"><button class="btn-add" id="saveAdd">Add</button></div>
   </div>
 
+</div>
+
+<div class="modal" id="exportModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>Caterer summary</h2>
+      <button class="modal-close" id="modalClose">×</button>
+    </div>
+    <textarea id="exportText" readonly></textarea>
+    <div class="modal-foot">
+      <button class="primary" id="copyBtn">Copy</button>
+      <button class="ghost" id="downloadBtn">Download .txt</button>
+      <span class="copied" id="copiedMsg">✓ Copied</span>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -329,6 +366,72 @@ document.getElementById("saveAdd").onclick=()=>{
   });
   ["f-name","f-email","f-diet","f-note"].forEach(i=>document.getElementById(i).value="");
   save();renderAll();document.getElementById("addForm").classList.remove("open");
+};
+
+// ---- Caterer export ----
+function buildCatererSummary(){
+  const h=headcount();
+  const going=data.filter(p=>p.status==="yes");
+  const diets=going.filter(p=>p.diet && p.diet.trim());
+  const L=[];
+  L.push("ABERDEEN & VISORS · ROOFTOP SOCIAL — CATERER SUMMARY");
+  L.push("Sunday, June 28 · 12–6pm · Ukrainian Village");
+  L.push("Catering: Green Street Smoked Meats");
+  L.push("Generated: "+new Date().toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"}));
+  L.push("");
+  L.push("HEADCOUNT (confirmed 'Going')");
+  L.push("  Adults: "+h.adults);
+  L.push("  Kids:   "+h.kids);
+  L.push("  TOTAL:  "+h.total);
+  L.push("");
+  L.push("DIETARY RESTRICTIONS & ALLERGIES ("+diets.length+")");
+  if(diets.length){
+    diets.forEach(p=>L.push("  • "+p.name+" — "+p.diet));
+  }else{
+    L.push("  • None reported");
+  }
+  L.push("");
+  L.push("CONFIRMED GUESTS ("+going.length+" parties)");
+  going.forEach(p=>{
+    let line="  • "+p.name+" — "+p.adults+" adult"+(p.adults==1?"":"s");
+    if(+p.kids>0) line+=", "+p.kids+" kid"+(p.kids==1?"":"s");
+    if(p.diet && p.diet.trim()) line+="  [⚠ "+p.diet+"]";
+    L.push(line);
+  });
+  const pending=data.filter(p=>p.status==="waiting"||p.status==="maybe");
+  if(pending.length){
+    L.push("");
+    L.push("NOTE: "+pending.length+" invitee(s) not yet confirmed — final counts may rise.");
+  }
+  return L.join("\n");
+}
+
+const modal=document.getElementById("exportModal");
+function openExport(){
+  document.getElementById("exportText").value=buildCatererSummary();
+  modal.classList.add("open");
+}
+function closeExport(){modal.classList.remove("open");document.getElementById("copiedMsg").classList.remove("show");}
+document.getElementById("exportBtn").onclick=openExport;
+document.getElementById("modalClose").onclick=closeExport;
+modal.onclick=e=>{if(e.target===modal)closeExport();};
+document.getElementById("copyBtn").onclick=async()=>{
+  const txt=document.getElementById("exportText").value;
+  const msg=document.getElementById("copiedMsg");
+  try{
+    await navigator.clipboard.writeText(txt);
+  }catch(e){
+    const ta=document.getElementById("exportText");ta.focus();ta.select();document.execCommand("copy");
+  }
+  msg.classList.add("show");setTimeout(()=>msg.classList.remove("show"),2000);
+};
+document.getElementById("downloadBtn").onclick=()=>{
+  const blob=new Blob([buildCatererSummary()],{type:"text/plain"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="rooftop-social-caterer-summary.txt";
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 };
 
 renderAll();
