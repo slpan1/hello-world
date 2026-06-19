@@ -6,17 +6,26 @@
 <title>Rooftop Social · Invite Tracker</title>
 <style>
   :root{
-    --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a;
-    --txt:#e7e9ee; --muted:#9aa3b2; --accent:#5b8cff;
-    --yes:#2fbf71; --no:#e0556b; --maybe:#e2b13c; --wait:#8a93a3;
-    --chip:#252a35;
+    --bg:#fff6e9; --panel:#ffffff; --panel2:#fff0db; --line:#f3ddc0;
+    --txt:#43352b; --muted:#a98f7a; --accent:#ff7a4d;
+    --yes:#1aa86a; --no:#e8576a; --maybe:#e29412; --wait:#bda58f;
+    --chip:#ffe8cc;
   }
   *{box-sizing:border-box}
   html{-webkit-text-size-adjust:100%}
   body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    background:var(--bg);color:var(--txt);line-height:1.4;-webkit-font-smoothing:antialiased;
-    overflow-x:hidden}
-  header{padding:max(22px,env(safe-area-inset-top)) 20px 16px;background:linear-gradient(160deg,#1b2233,#12141b);border-bottom:1px solid var(--line)}
+    background:var(--bg);
+    background-image:radial-gradient(1100px 420px at 100% -8%,rgba(255,196,92,.45),transparent 60%),
+      radial-gradient(900px 380px at -10% 4%,rgba(255,122,148,.30),transparent 55%);
+    background-attachment:fixed;
+    color:var(--txt);line-height:1.4;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  header{padding:max(22px,env(safe-area-inset-top)) 20px 18px;
+    background:linear-gradient(135deg,#ffc24b 0%,#ff8a5b 48%,#ff6f91 100%);
+    color:#fff;border-bottom:3px solid #ffd27a;box-shadow:0 6px 20px rgba(255,138,91,.25)}
+  header h1{color:#fff}
+  header .meta{color:rgba(255,255,255,.95)}
+  header .meta b{color:#fff}
+  header .head-note{color:rgba(255,255,255,.9)}
   .title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   h1{font-size:20px;margin:0;font-weight:650}
   .sun{font-size:20px}
@@ -25,7 +34,8 @@
   .wrap{max-width:860px;margin:0 auto;padding:16px 14px 60px}
 
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0}
-  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;
+    box-shadow:0 4px 14px rgba(214,140,70,.10)}
   .stat .n{font-size:24px;font-weight:700}
   .stat .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-top:2px}
   .stat.yes .n{color:var(--yes)} .stat.no .n{color:var(--no)}
@@ -43,7 +53,7 @@
   .filters button.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
 
   .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:9px;
-    display:flex;gap:12px;align-items:flex-start}
+    display:flex;gap:12px;align-items:flex-start;box-shadow:0 3px 12px rgba(214,140,70,.08)}
   .avatar{width:38px;height:38px;border-radius:50%;flex:0 0 38px;display:flex;align-items:center;justify-content:center;
     font-weight:650;font-size:14px;color:#fff}
   .info{flex:1;min-width:0}
@@ -59,8 +69,8 @@
   .b-waiting{background:rgba(138,147,163,.18);color:var(--wait)}
   .detail{font-size:13px;margin-top:7px;display:flex;flex-wrap:wrap;gap:6px 8px}
   .pill{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:2px 9px;font-size:12px}
-  .pill.diet{background:rgba(226,177,60,.12);border-color:rgba(226,177,60,.35);color:#f0cf7e}
-  .pill.kids{color:#a9c7ff}
+  .pill.diet{background:rgba(226,148,18,.14);border-color:rgba(226,148,18,.4);color:#b5760a}
+  .pill.kids{color:#2f7fd6}
   .note{font-size:12px;color:var(--muted);font-style:italic;margin-top:6px}
   .controls{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
   .controls select,.controls input{background:var(--panel2);border:1px solid var(--line);color:var(--txt);
@@ -79,12 +89,14 @@
   .stepper button:hover{border-color:var(--accent);color:var(--accent)}
   .stepper button:disabled{opacity:.35;cursor:default}
   .stepper .val{min-width:18px;text-align:center;font-weight:600;font-size:14px}
+  .step-hint{font-size:11px;color:var(--muted);align-self:center;font-style:italic}
 
-  .diet-board{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .diet-board{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;
+    box-shadow:0 3px 12px rgba(214,140,70,.08)}
   .diet-item{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
   .diet-item:last-child{border-bottom:0}
   .diet-item .who{font-weight:600;min-width:130px}
-  .diet-item .what{color:#f0cf7e}
+  .diet-item .what{color:#b5760a;font-weight:600}
   .empty{color:var(--muted);font-size:13px;padding:6px 0}
 
   .toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:18px;flex-wrap:wrap}
@@ -94,10 +106,10 @@
   .btn-reset:hover{border-color:var(--no);color:var(--no)}
   .btn-add{background:var(--accent);border:none;color:#fff;border-radius:8px;padding:7px 14px;font-size:13px;
     font-weight:600;cursor:pointer}
-  .btn-export{margin-left:auto;background:rgba(91,140,255,.14);border:1px solid rgba(91,140,255,.4);
-    color:var(--accent);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;
+  .btn-export{margin-left:auto;background:rgba(255,122,77,.14);border:1px solid rgba(255,122,77,.45);
+    color:#d8501f;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;
     letter-spacing:0;text-transform:none}
-  .btn-export:hover{background:rgba(91,140,255,.24)}
+  .btn-export:hover{background:rgba(255,122,77,.26)}
 
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;
     padding:16px;z-index:50}
@@ -347,10 +359,11 @@ function card(p){
           onchange="setDiet(${p.id},this.value)">
         <button class="btn-reset" onclick="removePerson(${p.id})" title="Remove">✕</button>
       </div>
-      ${(p.status==="yes"||p.status==="maybe")?`<div class="steppers">
+      <div class="steppers">
         ${stepper(p,"adults","Adults")}
         ${stepper(p,"kids","Kids")}
-      </div>`:""}
+        ${(p.status!=="yes")?`<span class="step-hint">won’t count until “Going”</span>`:""}
+      </div>
     </div>
   </div>`;
 }
