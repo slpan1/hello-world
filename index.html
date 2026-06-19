@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Rooftop Social · Invite Tracker</title>
 <style>
   :root{
@@ -12,9 +12,11 @@
     --chip:#252a35;
   }
   *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
   body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    background:var(--bg);color:var(--txt);line-height:1.4;-webkit-font-smoothing:antialiased}
-  header{padding:22px 20px 16px;background:linear-gradient(160deg,#1b2233,#12141b);border-bottom:1px solid var(--line)}
+    background:var(--bg);color:var(--txt);line-height:1.4;-webkit-font-smoothing:antialiased;
+    overflow-x:hidden}
+  header{padding:max(22px,env(safe-area-inset-top)) 20px 16px;background:linear-gradient(160deg,#1b2233,#12141b);border-bottom:1px solid var(--line)}
   .title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   h1{font-size:20px;margin:0;font-weight:650}
   .sun{font-size:20px}
@@ -60,10 +62,12 @@
   .pill.diet{background:rgba(226,177,60,.12);border-color:rgba(226,177,60,.35);color:#f0cf7e}
   .pill.kids{color:#a9c7ff}
   .note{font-size:12px;color:var(--muted);font-style:italic;margin-top:6px}
-  .controls{display:flex;gap:6px;margin-top:9px}
+  .controls{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
   .controls select,.controls input{background:var(--panel2);border:1px solid var(--line);color:var(--txt);
-    border-radius:7px;padding:4px 7px;font-size:12px}
-  .controls select{cursor:pointer}
+    border-radius:7px;padding:7px 9px;font-size:13px;min-height:38px}
+  .controls select{cursor:pointer;flex:0 0 auto}
+  .controls input{flex:1 1 120px;min-width:0}
+  .controls .btn-reset{flex:0 0 auto;min-width:38px;min-height:38px}
   .stale{color:var(--maybe);font-size:11px;margin-top:5px}
 
   .diet-board{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
@@ -87,6 +91,36 @@
     border-radius:7px;padding:7px 9px;font-size:13px}
   .add-form .full{grid-column:1/3}
   .add-form .row{grid-column:1/3;display:flex;gap:8px;justify-content:flex-end}
+
+  /* ---- Mobile ---- */
+  @media (max-width:560px){
+    header{padding-left:16px;padding-right:16px}
+    h1{font-size:17px}
+    .sun{font-size:18px}
+    .meta{font-size:12px;gap:4px 12px}
+    .wrap{padding:14px 12px 60px}
+    .stats{grid-template-columns:repeat(2,1fr);gap:8px}
+    .stat .n{font-size:21px}
+    .section-title{margin:20px 2px 9px}
+    .filters{gap:6px;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;
+      padding-bottom:4px;margin-right:-12px}
+    .filters button{flex:0 0 auto;padding:8px 14px}
+    .card{padding:11px 12px;gap:10px}
+    .avatar{width:34px;height:34px;flex-basis:34px;font-size:13px}
+    .name-row{gap:6px}
+    .badge{order:3}
+    .diet-item{flex-direction:column;gap:1px}
+    .diet-item .who{min-width:0}
+    .toolbar{flex-direction:column;align-items:stretch}
+    .toolbar > div{justify-content:stretch}
+    .toolbar .btn-add,.toolbar .btn-reset{flex:1;text-align:center;padding:11px}
+    .add-form{grid-template-columns:1fr}
+    .add-form .full,.add-form .row{grid-column:1/2}
+  }
+  /* Prevent iOS zoom-on-focus by keeping form fonts at 16px on small screens */
+  @media (max-width:560px){
+    .controls select,.controls input,.add-form input,.add-form select{font-size:16px}
+  }
 </style>
 </head>
 <body>
