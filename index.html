@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rooftop Social · Invite Tracker</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a;
+    --txt:#e7e9ee; --muted:#9aa3b2; --accent:#5b8cff;
+    --yes:#2fbf71; --no:#e0556b; --maybe:#e2b13c; --wait:#8a93a3;
+    --chip:#252a35;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--txt);line-height:1.4;-webkit-font-smoothing:antialiased}
+  header{padding:22px 20px 16px;background:linear-gradient(160deg,#1b2233,#12141b);border-bottom:1px solid var(--line)}
+  .title{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  h1{font-size:20px;margin:0;font-weight:650}
+  .sun{font-size:20px}
+  .meta{color:var(--muted);font-size:13px;margin-top:6px;display:flex;flex-wrap:wrap;gap:6px 16px}
+  .meta b{color:var(--txt);font-weight:600}
+  .wrap{max-width:860px;margin:0 auto;padding:16px 14px 60px}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .stat .n{font-size:24px;font-weight:700}
+  .stat .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-top:2px}
+  .stat.yes .n{color:var(--yes)} .stat.no .n{color:var(--no)}
+  .stat.maybe .n{color:var(--maybe)} .stat.wait .n{color:var(--wait)}
+  .head-note{font-size:11px;color:var(--muted);margin-top:4px}
+
+  .section-title{font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);
+    margin:24px 4px 10px;display:flex;align-items:center;gap:8px}
+  .section-title .count{background:var(--chip);border-radius:20px;padding:1px 9px;font-size:11px;color:var(--txt)}
+
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 4px}
+  .filters button{background:var(--panel);color:var(--muted);border:1px solid var(--line);
+    border-radius:20px;padding:6px 14px;font-size:13px;cursor:pointer;transition:.15s}
+  .filters button:hover{border-color:#3a4150;color:var(--txt)}
+  .filters button.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:9px;
+    display:flex;gap:12px;align-items:flex-start}
+  .avatar{width:38px;height:38px;border-radius:50%;flex:0 0 38px;display:flex;align-items:center;justify-content:center;
+    font-weight:650;font-size:14px;color:#fff}
+  .info{flex:1;min-width:0}
+  .name-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .name{font-weight:600}
+  .role{font-size:10px;text-transform:uppercase;letter-spacing:.05em;background:var(--chip);
+    color:var(--muted);padding:1px 7px;border-radius:6px}
+  .email{font-size:12px;color:var(--muted);word-break:break-all}
+  .badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap}
+  .b-yes{background:rgba(47,191,113,.16);color:var(--yes)}
+  .b-no{background:rgba(224,85,107,.16);color:var(--no)}
+  .b-maybe{background:rgba(226,177,60,.16);color:var(--maybe)}
+  .b-waiting{background:rgba(138,147,163,.18);color:var(--wait)}
+  .detail{font-size:13px;margin-top:7px;display:flex;flex-wrap:wrap;gap:6px 8px}
+  .pill{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:2px 9px;font-size:12px}
+  .pill.diet{background:rgba(226,177,60,.12);border-color:rgba(226,177,60,.35);color:#f0cf7e}
+  .pill.kids{color:#a9c7ff}
+  .note{font-size:12px;color:var(--muted);font-style:italic;margin-top:6px}
+  .controls{display:flex;gap:6px;margin-top:9px}
+  .controls select,.controls input{background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+    border-radius:7px;padding:4px 7px;font-size:12px}
+  .controls select{cursor:pointer}
+  .stale{color:var(--maybe);font-size:11px;margin-top:5px}
+
+  .diet-board{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .diet-item{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .diet-item:last-child{border-bottom:0}
+  .diet-item .who{font-weight:600;min-width:130px}
+  .diet-item .what{color:#f0cf7e}
+  .empty{color:var(--muted);font-size:13px;padding:6px 0}
+
+  .toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:18px;flex-wrap:wrap}
+  .toolbar small{color:var(--muted);font-size:11px}
+  .btn-reset{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:8px;
+    padding:6px 12px;font-size:12px;cursor:pointer}
+  .btn-reset:hover{border-color:var(--no);color:var(--no)}
+  .btn-add{background:var(--accent);border:none;color:#fff;border-radius:8px;padding:7px 14px;font-size:13px;
+    font-weight:600;cursor:pointer}
+  .add-form{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:10px;display:none;
+    grid-template-columns:1fr 1fr;gap:8px}
+  .add-form.open{display:grid}
+  .add-form input,.add-form select{background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+    border-radius:7px;padding:7px 9px;font-size:13px}
+  .add-form .full{grid-column:1/3}
+  .add-form .row{grid-column:1/3;display:flex;gap:8px;justify-content:flex-end}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap" style="padding-bottom:0">
+    <div class="title"><span class="sun">☀️</span><h1>Aberdeen &amp; Visors · Rooftop Social</h1></div>
+    <div class="meta">
+      <span>📅 <b>Sun, June 28</b> · 12–6pm</span>
+      <span>📍 Kavir's place, Ukrainian Village</span>
+      <span>🍖 Green Street Smoked Meats</span>
+      <span>✉️ RSVP by Thu 6/18</span>
+    </div>
+    <div class="head-note">Hosted by Kavir Naik &amp; family · organized by Leon Pan · family welcome (+1s &amp; kids OK)</div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="stats" id="stats"></div>
+
+  <div class="section-title">🍽️ Dietary &amp; allergies <span class="count" id="dietCount">0</span></div>
+  <div class="diet-board" id="dietBoard"></div>
+
+  <div class="section-title">⏳ Still waiting on <span class="count" id="waitCount">0</span></div>
+  <div id="waitingList"></div>
+
+  <div class="section-title">📋 All invitees</div>
+  <div class="filters" id="filters"></div>
+  <div id="list"></div>
+
+  <div class="toolbar">
+    <small id="savedNote">Changes save automatically to this browser.</small>
+    <div style="display:flex;gap:8px">
+      <button class="btn-add" id="toggleAdd">+ Add person</button>
+      <button class="btn-reset" id="reset">Reset to original data</button>
+    </div>
+  </div>
+
+  <div class="add-form" id="addForm">
+    <input class="full" id="f-name" placeholder="Name" />
+    <input id="f-email" placeholder="Email" />
+    <select id="f-status">
+      <option value="waiting">Waiting</option><option value="yes">Yes</option>
+      <option value="no">No</option><option value="maybe">Maybe</option>
+    </select>
+    <input id="f-adults" type="number" min="1" value="1" placeholder="Adults" />
+    <input id="f-kids" type="number" min="0" value="0" placeholder="Kids" />
+    <input class="full" id="f-diet" placeholder="Dietary / allergies (optional)" />
+    <input class="full" id="f-note" placeholder="Note (optional)" />
+    <div class="row"><button class="btn-add" id="saveAdd">Add</button></div>
+  </div>
+
+</div>
+
+<script>
+// ---- Seed data: from the calendar invite (17 invitees) + organizer, reconciled with the
+// latest Slack thread responses (Slack wins when newer than the calendar status). ----
+const SEED = [
+  {id:1,  name:"Leon Pan",            email:"leon@aberdeenadv.com",      role:"organizer", status:"yes",     adults:2, kids:0, diet:"", note:"+1 adult (Lucy). Organizing the event."},
+  {id:2,  name:"Kavir Naik",          email:"kavir@aberdeenadv.com",     role:"host",      status:"yes",     adults:1, kids:0, diet:"", note:"Hosting — opening up his place."},
+  {id:3,  name:"Liv DeSantis",        email:"LDeSantis@aberdeenadv.com", role:"guest",     status:"yes",     adults:2, kids:0, diet:"Shellfish allergy", note:"+1 adult & family. ‘ditto to Ryo — thank you!’"},
+  {id:4,  name:"Ludan Wu",            email:"lwu@aberdeenadv.com",       role:"guest",     status:"yes",     adults:2, kids:0, diet:"Mushroom allergy", note:"+1 adult. ‘Look forward to it!’"},
+  {id:5,  name:"Ryo Kondo",           email:"RKondo@aberdeenadv.com",    role:"guest",     status:"yes",     adults:2, kids:1, diet:"", note:"+1 adult, +1 kid (7 yr old)."},
+  {id:6,  name:"Philip Read",         email:"phil@aberdeenadv.com",      role:"guest",     status:"yes",     adults:1, kids:0, diet:"", note:"Accepted on calendar."},
+  {id:7,  name:"Simon Huleatt",       email:"Simon@aberdeenadv.com",     role:"guest",     status:"yes",     adults:1, kids:0, diet:"", note:"Accepted on calendar."},
+  {id:8,  name:"Tavleen Chahal",      email:"tchahal@aberdeenadv.com",   role:"guest",     status:"yes",     adults:1, kids:0, diet:"", note:"Accepted on calendar."},
+  {id:9,  name:"Suraj Sehgal",        email:"SSehgal@aberdeenadv.com",   role:"guest",     status:"no",      adults:0, kids:0, diet:"", note:"‘Can’t make it sadly. Out of town.’", stale:"Calendar still shows ✅ accepted — Slack reply is newer."},
+  {id:10, name:"David Wise",          email:"david@aberdeenadv.com",     role:"guest",     status:"no",      adults:0, kids:0, diet:"", note:"Declined on calendar."},
+  {id:11, name:"Marco Oropeza",       email:"marco@aberdeenadv.com",     role:"guest",     status:"no",      adults:0, kids:0, diet:"", note:"Traveling from LA / in Michigan for in-law’s 95th."},
+  {id:12, name:"Alakh Patel",         email:"alakh@aberdeenadv.com",     role:"guest",     status:"maybe",   adults:1, kids:0, diet:"", note:"Tentative on calendar."},
+  {id:13, name:"Michael Church Carson",email:"mcarson@aberdeenadv.com",  role:"optional",  status:"maybe",   adults:1, kids:0, diet:"", note:"Optional invitee — tentative."},
+  {id:14, name:"Aaron Sandler",       email:"asandler@aberdeenadv.com",  role:"guest",     status:"waiting", adults:1, kids:0, diet:"", note:""},
+  {id:15, name:"Annie Walsh",         email:"awalsh@aberdeenadv.com",    role:"guest",     status:"waiting", adults:1, kids:0, diet:"", note:""},
+  {id:16, name:"Chloe Martin",        email:"cmartin@aberdeenadv.com",   role:"guest",     status:"waiting", adults:1, kids:0, diet:"", note:""},
+  {id:17, name:"Henry Nicewick",      email:"hnicewick@aberdeenadv.com", role:"guest",     status:"waiting", adults:1, kids:0, diet:"", note:""},
+  {id:18, name:"Jonathan Chang",      email:"JChang@aberdeenadv.com",    role:"guest",     status:"waiting", adults:1, kids:0, diet:"", note:""},
+];
+
+const STORAGE_KEY = "rooftop-social-invites-v1";
+const STATUS_LABEL = {yes:"Going",no:"Can’t make it",maybe:"Maybe",waiting:"No response"};
+const FILTERS = [["all","All"],["yes","Going"],["maybe","Maybe"],["waiting","Waiting"],["no","Declined"]];
+const AVATAR_COLORS = ["#5b8cff","#e0556b","#2fbf71","#e2b13c","#9b6cff","#36b6c2","#e2773c","#c2528a"];
+
+let data = load();
+let activeFilter = "all";
+
+function load(){
+  try{
+    const s = localStorage.getItem(STORAGE_KEY);
+    if(s) return JSON.parse(s);
+  }catch(e){}
+  return clone(SEED);
+}
+function clone(o){return JSON.parse(JSON.stringify(o));}
+function save(){
+  try{localStorage.setItem(STORAGE_KEY, JSON.stringify(data));}catch(e){}
+}
+function initials(name){return name.split(/\s+/).map(w=>w[0]).slice(0,2).join("").toUpperCase();}
+function colorFor(name){let h=0;for(const c of name)h=(h*31+c.charCodeAt(0))>>>0;return AVATAR_COLORS[h%AVATAR_COLORS.length];}
+function esc(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+function headcount(){
+  let adults=0,kids=0;
+  data.forEach(p=>{if(p.status==="yes"){adults+=(+p.adults||0);kids+=(+p.kids||0);}});
+  return {adults,kids,total:adults+kids};
+}
+
+function renderStats(){
+  const c={yes:0,no:0,maybe:0,waiting:0};
+  data.forEach(p=>c[p.status]++);
+  const h=headcount();
+  document.getElementById("stats").innerHTML = `
+    <div class="stat yes"><div class="n">${c.yes}</div><div class="l">Going</div></div>
+    <div class="stat maybe"><div class="n">${c.maybe}</div><div class="l">Maybe</div></div>
+    <div class="stat wait"><div class="n">${c.waiting}</div><div class="l">Awaiting reply</div></div>
+    <div class="stat no"><div class="n">${c.no}</div><div class="l">Declined</div></div>
+    <div class="stat"><div class="n">${h.total}</div><div class="l">Headcount</div>
+      <div class="head-note">${h.adults} adults · ${h.kids} kids</div></div>`;
+}
+
+function renderDiet(){
+  const items = data.filter(p=>p.diet && p.diet.trim() && p.status!=="no");
+  document.getElementById("dietCount").textContent = items.length;
+  const board = document.getElementById("dietBoard");
+  if(!items.length){board.innerHTML='<div class="empty">No dietary restrictions reported yet.</div>';return;}
+  board.innerHTML = items.map(p=>`
+    <div class="diet-item"><span class="who">${esc(p.name)}</span>
+      <span class="what">${esc(p.diet)}</span></div>`).join("");
+}
+
+function renderWaiting(){
+  const w = data.filter(p=>p.status==="waiting");
+  document.getElementById("waitCount").textContent = w.length;
+  const el = document.getElementById("waitingList");
+  if(!w.length){el.innerHTML='<div class="diet-board"><div class="empty">Everyone has responded! 🎉</div></div>';return;}
+  el.innerHTML = w.map(card).join("");
+}
+
+function statusSelect(p){
+  return `<select onchange="setStatus(${p.id},this.value)">
+    ${Object.keys(STATUS_LABEL).map(s=>`<option value="${s}" ${p.status===s?"selected":""}>${STATUS_LABEL[s]}</option>`).join("")}
+  </select>`;
+}
+
+function card(p){
+  const det=[];
+  if(p.status==="yes"){
+    det.push(`<span class="pill">${p.adults} adult${p.adults==1?"":"s"}</span>`);
+    if(+p.kids>0) det.push(`<span class="pill kids">${p.kids} kid${p.kids==1?"":"s"}</span>`);
+  }
+  if(p.diet && p.diet.trim()) det.push(`<span class="pill diet">⚠️ ${esc(p.diet)}</span>`);
+  return `<div class="card">
+    <div class="avatar" style="background:${colorFor(p.name)}">${initials(p.name)}</div>
+    <div class="info">
+      <div class="name-row">
+        <span class="name">${esc(p.name)}</span>
+        ${p.role!=="guest"?`<span class="role">${esc(p.role)}</span>`:""}
+        <span class="badge b-${p.status}">${STATUS_LABEL[p.status]}</span>
+      </div>
+      <div class="email">${esc(p.email)}</div>
+      ${det.length?`<div class="detail">${det.join("")}</div>`:""}
+      ${p.note?`<div class="note">${esc(p.note)}</div>`:""}
+      ${p.stale?`<div class="stale">⚑ ${esc(p.stale)}</div>`:""}
+      <div class="controls">
+        ${statusSelect(p)}
+        <input type="text" value="${esc(p.diet)}" placeholder="dietary…" style="flex:1"
+          onchange="setDiet(${p.id},this.value)">
+        <button class="btn-reset" onclick="removePerson(${p.id})" title="Remove">✕</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderList(){
+  const f=document.getElementById("filters");
+  f.innerHTML = FILTERS.map(([k,l])=>`<button class="${activeFilter===k?"active":""}" onclick="setFilter('${k}')">${l}</button>`).join("");
+  const rows = data.filter(p=>activeFilter==="all"||p.status===activeFilter);
+  document.getElementById("list").innerHTML = rows.map(card).join("") || '<div class="diet-board"><div class="empty">No one in this group.</div></div>';
+}
+
+function renderAll(){renderStats();renderDiet();renderWaiting();renderList();}
+
+window.setFilter=k=>{activeFilter=k;renderList();};
+window.setStatus=(id,v)=>{const p=data.find(x=>x.id===id);if(p){p.status=v;if(v==="no"){p.adults=0;p.kids=0;}else if(p.adults===0){p.adults=1;}save();renderAll();}};
+window.setDiet=(id,v)=>{const p=data.find(x=>x.id===id);if(p){p.diet=v;save();renderAll();}};
+window.removePerson=id=>{data=data.filter(x=>x.id!==id);save();renderAll();};
+
+document.getElementById("reset").onclick=()=>{
+  if(confirm("Reset all responses back to the original screenshot data?")){
+    data=clone(SEED);save();activeFilter="all";renderAll();
+  }
+};
+document.getElementById("toggleAdd").onclick=()=>document.getElementById("addForm").classList.toggle("open");
+document.getElementById("saveAdd").onclick=()=>{
+  const name=document.getElementById("f-name").value.trim();
+  if(!name){alert("Name required");return;}
+  data.push({
+    id:Date.now(),name,
+    email:document.getElementById("f-email").value.trim(),
+    role:"guest",
+    status:document.getElementById("f-status").value,
+    adults:+document.getElementById("f-adults").value||1,
+    kids:+document.getElementById("f-kids").value||0,
+    diet:document.getElementById("f-diet").value.trim(),
+    note:document.getElementById("f-note").value.trim(),
+  });
+  ["f-name","f-email","f-diet","f-note"].forEach(i=>document.getElementById(i).value="");
+  save();renderAll();document.getElementById("addForm").classList.remove("open");
+};
+
+renderAll();
+</script>
+</body>
+</html>
