@@ -70,6 +70,16 @@
   .controls .btn-reset{flex:0 0 auto;min-width:38px;min-height:38px}
   .stale{color:var(--maybe);font-size:11px;margin-top:5px}
 
+  .steppers{display:flex;gap:10px;margin-top:9px;flex-wrap:wrap}
+  .stepper{display:flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);
+    border-radius:9px;padding:4px 6px}
+  .stepper .lbl{font-size:12px;color:var(--muted);padding:0 4px;min-width:42px}
+  .stepper button{width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:var(--chip);
+    color:var(--txt);font-size:17px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+  .stepper button:hover{border-color:var(--accent);color:var(--accent)}
+  .stepper button:disabled{opacity:.35;cursor:default}
+  .stepper .val{min-width:18px;text-align:center;font-weight:600;font-size:14px}
+
   .diet-board{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
   .diet-item{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
   .diet-item:last-child{border-bottom:0}
@@ -302,6 +312,16 @@ function statusSelect(p){
   </select>`;
 }
 
+function stepper(p,field,label){
+  const v=+p[field]||0, min=field==="adults"?1:0;
+  return `<div class="stepper">
+    <span class="lbl">${label}</span>
+    <button onclick="setCount(${p.id},'${field}',-1)" ${v<=min?"disabled":""}>−</button>
+    <span class="val">${v}</span>
+    <button onclick="setCount(${p.id},'${field}',1)">+</button>
+  </div>`;
+}
+
 function card(p){
   const det=[];
   if(p.status==="yes"){
@@ -323,10 +343,14 @@ function card(p){
       ${p.stale?`<div class="stale">⚑ ${esc(p.stale)}</div>`:""}
       <div class="controls">
         ${statusSelect(p)}
-        <input type="text" value="${esc(p.diet)}" placeholder="dietary…" style="flex:1"
+        <input type="text" value="${esc(p.diet)}" placeholder="dietary / allergies…" style="flex:1"
           onchange="setDiet(${p.id},this.value)">
         <button class="btn-reset" onclick="removePerson(${p.id})" title="Remove">✕</button>
       </div>
+      ${(p.status==="yes"||p.status==="maybe")?`<div class="steppers">
+        ${stepper(p,"adults","Adults")}
+        ${stepper(p,"kids","Kids")}
+      </div>`:""}
     </div>
   </div>`;
 }
@@ -343,6 +367,8 @@ function renderAll(){renderStats();renderDiet();renderWaiting();renderList();}
 window.setFilter=k=>{activeFilter=k;renderList();};
 window.setStatus=(id,v)=>{const p=data.find(x=>x.id===id);if(p){p.status=v;if(v==="no"){p.adults=0;p.kids=0;}else if(p.adults===0){p.adults=1;}save();renderAll();}};
 window.setDiet=(id,v)=>{const p=data.find(x=>x.id===id);if(p){p.diet=v;save();renderAll();}};
+window.setCount=(id,field,delta)=>{const p=data.find(x=>x.id===id);if(!p)return;
+  const min=field==="adults"?1:0;p[field]=Math.max(min,(+p[field]||0)+delta);save();renderAll();};
 window.removePerson=id=>{data=data.filter(x=>x.id!==id);save();renderAll();};
 
 document.getElementById("reset").onclick=()=>{
