@@ -53,3 +53,41 @@ calendar, Slack wins:
 | Chloe Martin | No response | Waiting |
 | Henry Nicewick | No response | Waiting |
 | Jonathan Chang | No response | Waiting |
+
+---
+
+# Mexico City · Area Guide (`mexico-city.html`)
+
+An interactive, self-contained map for learning the neighbourhoods of Mexico City
+before a trip. Open `mexico-city.html` in any browser — no build step, no server,
+no network calls, no dependencies.
+
+## What it does
+- **38 clickable zones** covering the city and its inner suburbs, coloured by
+  character (historic core, trendy/dining, upscale, everyday local, colonial &
+  arts, parks & water, outer/transit). Click one for a short description plus
+  *best for*, *feel*, *nearest metro* and a practical tip.
+- **114 pins** in seven filterable categories: Michelin, sights, museums,
+  shopping, bars, food & markets, parks. Click a pin for a description, address
+  and a "good to know" line.
+- **Michelin data follows the 2026 MICHELIN Guide México selection** — the two
+  two-star kitchens (Pujol, Quintonil), the nine one-stars, and El Califa de León
+  flagged as formerly starred — plus several Bib Gourmand entries.
+- **Day trips view** — a hub-and-spoke map of 15 destinations around the valley
+  with drive times, from Teotihuacán to Taxco.
+- **Search** across every zone, place and day trip; **All areas** and
+  **Highlights** browsers; and a **Basics** tab (altitude, transport, money,
+  meal times, Monday museum closures, safety).
+
+## How it's drawn
+There are no map tiles or external libraries. Zone shapes are generated at load
+time: every area carries one or more real lat/lon seed points, and the page
+computes a clipped nearest-neighbour partition of an urban-footprint polygon, so
+the zones tile without gaps and sit in geographically correct positions. Main
+avenues, the airport runways, the Xochimilco canal grid and the big parks are
+drawn as separate layers. Labels and pins are laid out in screen space with
+collision detection, so the map thins out when zoomed out and fills in as you
+zoom in.
+
+Zones are simplified for clarity — good for orientation, not for navigation.
+Hours, prices and bookings change; verify before you go.

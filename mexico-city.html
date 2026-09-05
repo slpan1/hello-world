@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Mexico City Area Guide</title>
+<style>
+  :root{
+    --bg:#f6efe4; --paper:#fbf6ee; --panel:#ffffff; --line:#e4d7c3; --line2:#d6c4a8;
+    --ink:#2f2a24; --ink2:#6b5f52; --muted:#96897a;
+    --accent:#c2410c; --accent2:#0d7f7a; --gold:#b7791f; --rose:#be3455;
+    --shadow:0 6px 22px rgba(90,66,38,.13);
+    --shadow-sm:0 2px 8px rgba(90,66,38,.10);
+    --water:#a8cfd8; --road:#ffffff; --road2:#f0dcc0;
+    --panelW:392px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);overflow:hidden;
+    font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.45;-webkit-font-smoothing:antialiased}
+  button{font:inherit;color:inherit}
+
+  /* ---------- shell ---------- */
+  .app{display:flex;flex-direction:column;height:100dvh;width:100%}
+  header{display:flex;align-items:center;gap:12px;padding:10px 14px;
+    background:linear-gradient(100deg,#0f766e 0%,#166b5c 42%,#b45309 100%);
+    color:#fff;box-shadow:0 3px 14px rgba(60,40,20,.22);z-index:30;flex:none}
+  .brand{display:flex;align-items:baseline;gap:9px;min-width:0}
+  .brand h1{margin:0;font-size:16px;font-weight:700;letter-spacing:.2px;white-space:nowrap}
+  .brand .sub{font-size:11.5px;color:rgba(255,255,255,.82);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .head-sp{flex:1}
+  .viewtabs{display:flex;background:rgba(0,0,0,.20);border-radius:999px;padding:3px;gap:2px;flex:none}
+  .viewtabs button{background:none;border:0;color:rgba(255,255,255,.80);font-size:12.5px;font-weight:600;
+    padding:6px 13px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:.15s}
+  .viewtabs button.on{background:rgba(255,255,255,.95);color:#0f4c46;box-shadow:0 1px 4px rgba(0,0,0,.18)}
+  .iconbtn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.28);color:#fff;
+    width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:15px;line-height:1;flex:none}
+  .iconbtn:hover{background:rgba(255,255,255,.28)}
+
+  .body{flex:1;display:flex;min-height:0;position:relative}
+
+  /* ---------- map ---------- */
+  .mapwrap{flex:1;position:relative;min-width:0;background:var(--bg);overflow:hidden;touch-action:none}
+  svg#map{display:block;width:100%;height:100%;cursor:grab;background:
+    radial-gradient(120% 90% at 50% 0%,#fdf8f0 0%,#f2e8d8 55%,#e9dcc6 100%)}
+  svg#map.drag{cursor:grabbing}
+  .cell{stroke:#fff;stroke-width:1.1;cursor:pointer;transition:fill-opacity .12s,filter .12s}
+  .cell:hover{fill-opacity:.98;filter:brightness(1.06)}
+  .cell.sel{stroke:#2f2a24;stroke-width:2.2}
+  .cell.dim{fill-opacity:.42}
+  .boundary{fill:none;stroke:#b09a78;stroke-width:1.6;stroke-dasharray:6 4;opacity:.85}
+  .road{fill:none;stroke:var(--road);stroke-linecap:round;stroke-linejoin:round;opacity:.92;pointer-events:none}
+  .road-case{fill:none;stroke:rgba(150,120,80,.28);stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+  .feat{pointer-events:none}
+  .canal{fill:none;stroke:var(--water);stroke-width:1.4;opacity:.9}
+
+  /* screen-space overlay layers */
+  .lbl{font-size:11px;font-weight:650;fill:#463b2e;paint-order:stroke fill;
+    stroke:rgba(255,252,246,.92);stroke-width:3.4px;stroke-linejoin:round;pointer-events:none;text-anchor:middle}
+  .lbl.big{font-size:12.5px}
+  .lbl.sm{font-size:9.7px;fill:#6b5f52;font-weight:600}
+  .lbl.park{fill:#2f6b3f;stroke:rgba(255,255,255,.85)}
+  .lbl.sel{fill:#111;font-weight:800}
+  .pin{cursor:pointer}
+  .pin circle.dot{stroke:#fff;stroke-width:1.6}
+  .pin text.gl{font-size:9px;text-anchor:middle;dominant-baseline:central;pointer-events:none;fill:#fff;font-weight:700}
+  .pin.sel circle.dot{stroke:#2f2a24;stroke-width:2.4}
+  .pin .halo{fill:none;stroke:rgba(0,0,0,.10);stroke-width:6}
+
+  /* ---------- map controls ---------- */
+  .ctl{position:absolute;display:flex;flex-direction:column;gap:6px;z-index:12}
+  .ctl.zoom{right:12px;bottom:96px}
+  .ctl button{width:36px;height:36px;border-radius:10px;border:1px solid var(--line2);background:rgba(255,255,255,.94);
+    box-shadow:var(--shadow-sm);cursor:pointer;font-size:16px;font-weight:700;color:var(--ink2);backdrop-filter:blur(4px)}
+  .ctl button:hover{background:#fff;color:var(--ink)}
+  .ctl button.small{font-size:11px;font-weight:600}
+
+  .filters{position:absolute;left:12px;top:12px;right:12px;display:flex;gap:6px;flex-wrap:wrap;z-index:12;pointer-events:none}
+  .filters .chip{pointer-events:auto;display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.92);
+    border:1px solid var(--line2);border-radius:999px;padding:5px 11px 5px 7px;font-size:12px;font-weight:600;color:var(--ink2);
+    cursor:pointer;box-shadow:var(--shadow-sm);backdrop-filter:blur(6px);transition:.13s;white-space:nowrap}
+  .filters .chip .sw{width:14px;height:14px;border-radius:50%;display:inline-grid;place-items:center;font-size:8px;color:#fff;font-weight:700}
+  .filters .chip.off{opacity:.44;background:rgba(255,255,255,.62)}
+  .filters .chip:hover{border-color:var(--ink2)}
+
+  .legend{position:absolute;left:12px;bottom:12px;background:rgba(255,255,255,.93);border:1px solid var(--line2);
+    border-radius:12px;padding:9px 11px;box-shadow:var(--shadow-sm);z-index:12;backdrop-filter:blur(6px);max-width:min(300px,60vw)}
+  .legend h4{margin:0 0 6px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .legend .rows{display:flex;flex-wrap:wrap;gap:4px 12px}
+  .legend .r{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink2)}
+  .legend .r i{width:11px;height:11px;border-radius:3px;display:block;border:1px solid rgba(0,0,0,.10)}
+  .legend .hint{margin-top:7px;font-size:10.5px;color:var(--muted);line-height:1.35}
+  .legend.collapsed .rows,.legend.collapsed .hint{display:none}
+  .legend h4 span{float:right;cursor:pointer;color:var(--ink2);font-size:11px;margin-left:10px}
+
+  .tip{position:absolute;z-index:20;background:rgba(30,25,20,.93);color:#fff;font-size:11.5px;padding:5px 9px;
+    border-radius:7px;pointer-events:none;transform:translate(-50%,-140%);white-space:nowrap;opacity:0;transition:opacity .1s;
+    box-shadow:0 4px 12px rgba(0,0,0,.25);max-width:240px}
+  .tip.on{opacity:1}
+  .tip b{font-weight:700}
+  .tip i{font-style:normal;color:#ffd7a8}
+
+  /* ---------- panel ---------- */
+  .panel{width:var(--panelW);flex:none;background:var(--paper);border-left:1px solid var(--line);
+    display:flex;flex-direction:column;min-height:0;z-index:15;box-shadow:-8px 0 24px rgba(90,66,38,.07)}
+  .search{padding:11px 12px 9px;border-bottom:1px solid var(--line);position:relative;background:var(--paper)}
+  .search input{width:100%;border:1px solid var(--line2);background:#fff;border-radius:10px;padding:9px 32px 9px 32px;
+    font-size:13.5px;color:var(--ink);outline:none}
+  .search input::-webkit-search-cancel-button,.search input::-webkit-search-decoration{-webkit-appearance:none;appearance:none;display:none}
+  .search input:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(13,127,122,.13)}
+  .search .mag{position:absolute;left:22px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none}
+  .search .clr{position:absolute;right:20px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--muted);
+    cursor:pointer;font-size:15px;display:none;padding:2px 4px}
+  .search.has .clr{display:block}
+  .results{position:absolute;left:12px;right:12px;top:52px;background:#fff;border:1px solid var(--line2);border-radius:12px;
+    box-shadow:var(--shadow);max-height:min(58vh,420px);overflow:auto;z-index:40;display:none}
+  .results.on{display:block}
+  .results .res{display:flex;gap:9px;align-items:center;padding:9px 11px;cursor:pointer;border-bottom:1px solid #f3ece1}
+  .results .res:last-child{border-bottom:0}
+  .results .res:hover,.results .res.act{background:#fdf5e9}
+  .results .res .ic{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:11px;color:#fff;flex:none}
+  .results .res .t{font-size:13px;font-weight:600;line-height:1.25}
+  .results .res .s{font-size:11px;color:var(--muted)}
+  .results .none{padding:14px;font-size:12.5px;color:var(--muted);text-align:center}
+
+  .ptabs{display:flex;gap:4px;padding:8px 12px 0;border-bottom:1px solid var(--line);background:var(--paper)}
+  .ptabs button{border:0;background:none;padding:7px 11px 9px;font-size:12.5px;font-weight:650;color:var(--muted);
+    cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-1px}
+  .ptabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
+  .pbody{flex:1;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  .pad{padding:14px}
+
+  .hero{padding:15px 14px 13px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#fff 0%,var(--paper) 100%)}
+  .hero .kicker{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .hero h2{margin:3px 0 5px;font-size:21px;line-height:1.15;font-weight:750;letter-spacing:-.2px}
+  .hero .sub{font-size:12px;color:var(--ink2)}
+  .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+  .tag{font-size:11px;background:#f2e9da;border:1px solid var(--line);color:var(--ink2);border-radius:999px;padding:3px 9px;font-weight:600}
+  .tag.k{background:rgba(13,127,122,.10);border-color:rgba(13,127,122,.25);color:#0b6560}
+  .desc{font-size:13.5px;color:var(--ink);line-height:1.55}
+  .desc p{margin:0 0 10px}
+  .facts{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;margin:12px 0 0;font-size:12.5px;align-items:start}
+  .facts dt{color:var(--muted);font-weight:650;white-space:nowrap}
+  .facts dd{margin:0;color:var(--ink2)}
+  .sec{margin-top:16px}
+  .sec h3{margin:0 0 8px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+    display:flex;align-items:center;gap:8px}
+  .sec h3:after{content:"";flex:1;height:1px;background:var(--line)}
+  .item{display:flex;gap:10px;padding:9px;border:1px solid var(--line);background:#fff;border-radius:11px;
+    margin-bottom:7px;cursor:pointer;transition:.12s;box-shadow:0 1px 3px rgba(90,66,38,.05)}
+  .item:hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow-sm)}
+  .item .ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:12px;color:#fff;flex:none;margin-top:1px}
+  .item .t{font-size:13px;font-weight:650;line-height:1.3}
+  .item .d{font-size:11.5px;color:var(--ink2);line-height:1.4;margin-top:2px}
+  .item .m{font-size:10.5px;color:var(--muted);margin-top:3px}
+  .stars{color:var(--gold);font-size:11px;letter-spacing:1px}
+  .empty{font-size:12.5px;color:var(--muted);padding:10px 2px}
+  .backlink{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--accent2);cursor:pointer;font-weight:650;
+    background:none;border:0;padding:0;margin-bottom:8px}
+  .backlink:hover{text-decoration:underline}
+  .arealist .item .t{font-weight:700}
+  .grp{margin-bottom:14px}
+  .grp h4{margin:0 0 7px;font-size:12px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:7px}
+  .grp h4 i{width:11px;height:11px;border-radius:3px;display:block}
+  .note{background:#fff8ec;border:1px solid #f0dcbb;border-radius:10px;padding:10px 11px;font-size:12px;color:#7a5a20;line-height:1.5}
+  .note b{color:#5d4413}
+  .foot{padding:12px 14px 30px;font-size:11px;color:var(--muted);line-height:1.5;border-top:1px solid var(--line);margin-top:14px}
+
+  .sheet-grip{display:none}
+  /* ---------- mobile ---------- */
+  @media (max-width:860px){
+    .app{height:100dvh}
+    .body{flex-direction:column}
+    .panel{position:absolute;left:0;right:0;bottom:0;width:auto;height:62dvh;border-left:0;border-top:1px solid var(--line);
+      border-radius:16px 16px 0 0;transform:translateY(calc(100% - 116px));transition:transform .26s cubic-bezier(.3,.8,.4,1);
+      box-shadow:0 -8px 26px rgba(90,66,38,.16)}
+    .panel.open{transform:translateY(0)}
+    .sheet-grip{display:block;width:40px;height:4px;border-radius:3px;background:var(--line2);margin:7px auto 1px;cursor:pointer}
+    .legend{bottom:126px;font-size:10px}
+    .ctl.zoom{bottom:210px}
+    .filters{gap:6px;flex-wrap:nowrap;overflow-x:auto;pointer-events:auto;padding-bottom:2px;scrollbar-width:none}
+    .filters::-webkit-scrollbar{display:none}
+    .filters .chip{font-size:11px;padding:4px 9px 4px 6px}
+    .brand .sub{display:none}
+  }
+  @media (max-width:520px){
+    .brand h1{font-size:14px}
+    .viewtabs button{padding:6px 10px;font-size:12px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <h1>Ciudad de México</h1>
+      <span class="sub">tap an area to learn it · pins = food, sights, shopping</span>
+    </div>
+    <div class="head-sp"></div>
+    <div class="viewtabs" id="viewtabs">
+      <button data-view="city" class="on">City</button>
+      <button data-view="region">Day trips</button>
+    </div>
+    <button class="iconbtn" id="btnTips" title="Trip basics">?</button>
+  </header>
+
+  <div class="body">
+    <div class="mapwrap" id="mapwrap">
+      <svg id="map" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="trees" width="9" height="9" patternUnits="userSpaceOnUse">
+            <circle cx="3" cy="3" r="1.5" fill="rgba(46,110,62,.22)"/>
+            <circle cx="7" cy="7" r="1.1" fill="rgba(46,110,62,.16)"/>
+          </pattern>
+          <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#6b4a20" flood-opacity=".18"/>
+          </filter>
+        </defs>
+        <g id="gWorld">
+          <clipPath id="cityClip"><path id="cityClipPath" d=""/></clipPath>
+          <g id="gCells"></g>
+          <g id="gFeat" class="feat"></g>
+          <g id="gRoads"></g>
+          <g id="gBound"></g>
+        </g>
+        <g id="gPins"></g>
+        <g id="gLabels"></g>
+      </svg>
+
+      <div class="filters" id="filters"></div>
+
+      <div class="ctl zoom">
+        <button id="zin" title="Zoom in">+</button>
+        <button id="zout" title="Zoom out">&minus;</button>
+        <button id="zreset" class="small" title="Zoom out to the whole city / back to the centre">All</button>
+      </div>
+
+      <div class="legend" id="legend">
+        <h4>Area character <span id="legToggle">hide</span></h4>
+        <div class="rows" id="legRows"></div>
+        <div class="hint">Areas are drawn as simplified zones, not exact boundaries — good for orientation, not for navigation.</div>
+      </div>
+
+      <div class="tip" id="tip"></div>
+    </div>
+
+    <aside class="panel" id="panel">
+      <div class="sheet-grip" id="grip"></div>
+      <div class="search" id="searchWrap">
+        <span class="mag">&#9906;</span>
+        <input id="q" type="search" placeholder="Search areas, restaurants, sights…" autocomplete="off" spellcheck="false" />
+        <button class="clr" id="qclr" title="Clear">&times;</button>
+        <div class="results" id="results"></div>
+      </div>
+      <div class="ptabs" id="ptabs">
+        <button data-tab="detail" class="on">Selected</button>
+        <button data-tab="areas">All areas</button>
+        <button data-tab="list">Highlights</button>
+        <button data-tab="tips">Basics</button>
+      </div>
+      <div class="pbody" id="pbody"></div>
+    </aside>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =========================================================================
+   1. AREA DATA  — simplified zones, positioned by real coordinates.
+      pts: one or more seed points (lat, lon). Multi-point areas get an
+      elongated / larger zone, which matches the real footprint better.
+   ========================================================================= */
+const CHAR = {
+  historic:{label:"Historic core",   fill:"#e0a06a"},
+  trendy:  {label:"Trendy / dining", fill:"#e08ba0"},
+  upscale: {label:"Upscale",         fill:"#e0c274"},
+  local:   {label:"Everyday local",  fill:"#a8bf9b"},
+  culture: {label:"Colonial & arts", fill:"#8fb6cc"},
+  green:   {label:"Parks & water",   fill:"#8fc79b"},
+  outer:   {label:"Outer / transit", fill:"#c3bcaf"}
+};
+
+const AREAS = [
+{id:"centro", name:"Centro Histórico", es:"Cuauhtémoc", char:"historic", pts:[[19.4345,-99.1345],[19.4300,-99.1265],[19.4400,-99.1330]],
+ blurb:"The 700-year-old heart of the city, built on the ruins of Aztec Tenochtitlán and paved with volcanic stone. The Zócalo, the cathedral, the Templo Mayor dig and Diego Rivera's murals in the Palacio Nacional are all within four blocks of each other, surrounded by streets that each sell one thing — lamps on one, wedding dresses on the next.",
+ best:"Big-ticket history, murals, cantinas, street food",
+ metro:"Zócalo (L2), Allende (L2), Bellas Artes (L2/L8)",
+ feel:"Loud, dense, endlessly interesting by day; quieter and patchier after dark",
+ tip:"Go on a Sunday morning when museums are cheap and traffic disappears. Rooftop terraces on Madero and 5 de Mayo have the best cathedral views."},
+
+{id:"alameda", name:"Alameda & Tabacalera", es:"Cuauhtémoc", char:"historic", pts:[[19.4370,-99.1460],[19.4405,-99.1545]],
+ blurb:"The western edge of the old city, anchored by the Alameda Central — the oldest public park in the Americas — and the marble Palacio de Bellas Artes. Behind it, Tabacalera is a workaday quarter of art-deco blocks, the Monumento a la Revolución and a surprisingly good Cuban-and-cantina strip.",
+ best:"Bellas Artes, murals, Sunday strolling",
+ metro:"Bellas Artes (L2/L8), Hidalgo (L2/L3), Revolución (L2)",
+ feel:"Grand civic buildings, wide sidewalks, a bit rough at the seams",
+ tip:"The Museo Mural Diego Rivera holds his 'Dream of a Sunday Afternoon' — it's small, cheap, and the single best 20 minutes in the area."},
+
+{id:"lagunilla", name:"Lagunilla & Tepito", es:"Cuauhtémoc", char:"local", pts:[[19.4450,-99.1300]],
+ blurb:"Mexico City's great flea-market district: Lagunilla's Sunday antiques bazaar spills for blocks, and neighbouring Tepito is the legendary — and genuinely rough — market barrio where everything in the city eventually turns up for sale.",
+ best:"Sunday antiques hunting at Lagunilla, mariachi at nearby Garibaldi",
+ metro:"Garibaldi (L8/LB), Lagunilla (LB)",
+ feel:"Raw, crowded, all business",
+ tip:"Lagunilla on Sunday is fine with normal city sense — go in daylight, carry little. Tepito proper is best skipped unless you're with someone local."},
+
+{id:"guerrero", name:"Guerrero", es:"Cuauhtémoc", char:"local", pts:[[19.4470,-99.1450]],
+ blurb:"A working-class grid just north-west of the centre, best known to visitors for the Biblioteca Vasconcelos — a jaw-dropping 'megalibrary' of suspended glass stacks and a whale skeleton — and for cheap eats around Buenavista station.",
+ best:"Vasconcelos library, train/bus connections",
+ metro:"Guerrero (L3/LB), Buenavista (LB, Tren Suburbano)",
+ feel:"Ordinary, busy, not a lingering neighbourhood",
+ tip:"Buenavista is where the suburban train and the Mexibús to the north converge — handy if you're heading toward Tepotzotlán."},
+
+{id:"tlatelolco", name:"Tlatelolco", es:"Cuauhtémoc", char:"local", pts:[[19.4545,-99.1390]],
+ blurb:"A vast 1960s housing estate around the Plaza de las Tres Culturas, where an Aztec ceremonial site, a 16th-century church and modernist towers stand in one frame. It's also the site of the 1968 student massacre, remembered in a small, sobering memorial museum.",
+ best:"Layered history, brutalist architecture, quiet plazas",
+ metro:"Tlatelolco (L3), Garibaldi (L8/LB)",
+ feel:"Open, breezy, residential, low-key",
+ tip:"Combine it with the Basílica: they're a short taxi ride apart on the same northern axis."},
+
+{id:"sanrafael", name:"San Rafael", es:"Cuauhtémoc", char:"local", pts:[[19.4400,-99.1595]],
+ blurb:"A faded belle-époque neighbourhood of theatres, mansions carved into apartments and old cantinas — the city's theatre district, now quietly filling with cheap studios and coffee bars. Ribera de San Cosme is a proper street-food corridor.",
+ best:"Theatre, cheap eats, old-city architecture without crowds",
+ metro:"San Cosme (L2), Normal (L2)",
+ feel:"Lived-in, gently bohemian, a decade behind Roma",
+ tip:"El Califa de León — the tiny taquería that held a Michelin star in 2024 and 2025 — is a counter with four stools on Ribera de San Cosme."},
+
+{id:"smr", name:"Santa María la Ribera", es:"Cuauhtémoc", char:"local", pts:[[19.4505,-99.1625]],
+ blurb:"Built around the Kiosco Morisco, a fantastical Moorish pavilion shipped back from a world's fair, this is one of the city's most photogenic old barrios — porfirian houses, a geology museum full of meteorites, and a rising café scene.",
+ best:"Architecture wandering, weekend markets, low prices",
+ metro:"San Cosme (L2), Buenavista (LB)",
+ feel:"Neighbourly and green in the middle, scruffier at the edges",
+ tip:"The Museo de Geología (UNAM) has a spiral iron staircase worth the entry alone."},
+
+{id:"juarez", name:"Juárez & Zona Rosa", es:"Cuauhtémoc", char:"trendy", pts:[[19.4265,-99.1600],[19.4290,-99.1520]],
+ blurb:"Between Reforma and Roma: Juárez is the city's sharpest small-restaurant-and-cocktail zone right now, while the adjoining Zona Rosa is the historic LGBTQ+ nightlife quarter, now also home to a busy Koreatown of barbecue joints and karaoke.",
+ best:"Cocktail bars, Korean food, nightlife, walkability to everything",
+ metro:"Insurgentes (L1), Cuauhtémoc (L1), Sevilla (L1)",
+ feel:"Late-night, mixed, energetic; scruffy in patches",
+ tip:"Handshake Speakeasy and Hanky Panky are both here and both need reservations — book days ahead, not hours."},
+
+{id:"cuauhtemoc", name:"Colonia Cuauhtémoc", es:"Cuauhtémoc", char:"trendy", pts:[[19.4335,-99.1690]],
+ blurb:"The embassy strip north of Reforma — streets named after rivers, quiet mid-century blocks, and a dense little cluster of very good restaurants and wine bars that locals treat as an extension of Juárez.",
+ best:"Grown-up dining, hotels near Reforma, easy Chapultepec access",
+ metro:"Sevilla (L1), Chapultepec (L1)",
+ feel:"Calm, leafy, professional",
+ tip:"Río Pánuco and Río Lerma are the two streets to walk if you want dinner options without a plan."},
+
+{id:"romanorte", name:"Roma Norte", es:"Cuauhtémoc", char:"trendy", pts:[[19.4180,-99.1640],[19.4145,-99.1580]],
+ blurb:"The neighbourhood most visitors fall for: early-1900s European-style mansions, jacaranda-lined streets, two Michelin-starred kitchens within four blocks, and a bookshop-gallery-coffee density that makes a whole day evaporate.",
+ best:"Restaurants, design shops, galleries, staying put",
+ metro:"Insurgentes (L1), Hospital General (L3), Metrobús along Álvaro Obregón",
+ feel:"Handsome, walkable, busy, increasingly expensive",
+ tip:"Álvaro Obregón is the spine; Colima and Córdoba are the prettiest strolls. Book Rosetta and Máximo well ahead."},
+
+{id:"romasur", name:"Roma Sur", es:"Cuauhtémoc", char:"trendy", pts:[[19.4055,-99.1615]],
+ blurb:"Roma Norte's cheaper, quieter half below Coahuila — the same architecture with fewer tourists, plus the Mercado Medellín, an excellent Latin-American market where the city's Colombian, Cuban and Venezuelan communities shop.",
+ best:"Market eating, calmer stays, value",
+ metro:"Centro Médico (L3/L9), Hospital General (L3)",
+ feel:"Residential and easygoing",
+ tip:"Go to Mercado Medellín hungry: ceviche counters, tropical fruit, and a whole aisle of Caribbean spice."},
+
+{id:"condesa", name:"Condesa", es:"Cuauhtémoc", char:"trendy", pts:[[19.4115,-99.1740],[19.4155,-99.1780]],
+ blurb:"Art-deco apartment blocks curled around two parks — Parque México, built on an old racetrack, and Parque España. Pavement cafés, dog walkers, and a bar-to-block ratio that makes it the easiest place in the city to spend an evening on foot.",
+ best:"Café mornings, park walks, casual dinners, nightlife that isn't loud",
+ metro:"Chilpancingo (L9), Patriotismo (L9), Sevilla (L1)",
+ feel:"Green, mellow, expat-heavy, very walkable",
+ tip:"Amsterdam is the oval street that traces the old racetrack — walking its full loop takes about 25 minutes."},
+
+{id:"escandon", name:"Escandón", es:"Miguel Hidalgo", char:"trendy", pts:[[19.4020,-99.1830]],
+ blurb:"Condesa's low-key neighbour across the Viaducto: a grid of two-storey houses, taquerías, and mechanics that has quietly become where priced-out chefs and designers moved. Great value, very few tourists.",
+ best:"Neighbourhood taquerías, cheaper rentals, day-to-day life",
+ metro:"Patriotismo (L9), Juanacatlán (L1)",
+ feel:"Unpolished, friendly, genuinely local",
+ tip:"The Sunday tianguis (street market) here is the real thing — produce, fried fish, and pirated everything."},
+
+{id:"doctores", name:"Doctores", es:"Cuauhtémoc", char:"local", pts:[[19.4180,-99.1450]],
+ blurb:"A gritty grid of hospitals, garages and wholesale parts shops squeezed between Roma and the centre — and the home of Arena México, the cathedral of lucha libre. Its reputation is worse than a daytime visit warrants, but it's not a stroll-at-night barrio.",
+ best:"Lucha libre nights, cheap comida corrida",
+ metro:"Doctores (L8), Cuauhtémoc (L1), Niños Héroes (L3)",
+ feel:"Industrial, unglamorous, straightforward",
+ tip:"Arena México fights are Tuesday, Friday and Sunday. Take a taxi or ride-share to the door and back."},
+
+{id:"polanco", name:"Polanco", es:"Miguel Hidalgo", char:"upscale", pts:[[19.4325,-99.1930],[19.4380,-99.2020],[19.4390,-99.1880]],
+ blurb:"The luxury quarter: Avenida Presidente Masaryk is the flagship-boutique street, Lincoln and Dumas hold both of the city's two-star restaurants, and the Soumaya and Jumex museums sit together in the Plaza Carso development on the north edge.",
+ best:"Fine dining, luxury shopping, big-name museums, business hotels",
+ metro:"Polanco (L7), Auditorio (L7)",
+ feel:"Polished, expensive, orderly, a little corporate",
+ tip:"Pujol and Quintonil are both here and both open reservations weeks out — set a calendar reminder for the release date."},
+
+{id:"anzures", name:"Anzures", es:"Miguel Hidalgo", char:"upscale", pts:[[19.4300,-99.1790]],
+ blurb:"A small wedge between Reforma, Polanco and Chapultepec, full of mid-century apartment buildings, Lebanese-Mexican bakeries and business hotels — quiet, central, and cheaper than Polanco for the same walking distances.",
+ best:"Value hotels near Reforma, quick Chapultepec access",
+ metro:"Chapultepec (L1), Auditorio (L7)",
+ feel:"Understated and residential",
+ tip:"You can walk from here to the Anthropology Museum in about 15 minutes through the park."},
+
+{id:"chapultepec", name:"Bosque de Chapultepec", es:"Miguel Hidalgo", char:"green", pts:[[19.4210,-99.1840],[19.4145,-99.2040],[19.4080,-99.2260]],
+ blurb:"One of the largest city parks in the Western Hemisphere — nearly twice Central Park — in three sections. The first holds the castle on its hill, the Anthropology Museum, a lake and the zoo; the second has the children's museum and fountains; the third is rough woodland.",
+ best:"The Anthropology Museum, the castle, boating, a free half-day",
+ metro:"Chapultepec (L1), Auditorio (L7), Constituyentes (L7)",
+ feel:"Woodland, families, vendors, joggers; packed on Sundays",
+ tip:"Museums here close Mondays. Arrive at Antropología at opening — it takes three hours minimum and gets crushed by 1pm."},
+
+{id:"sanmiguel", name:"San Miguel Chapultepec", es:"Miguel Hidalgo", char:"culture", pts:[[19.4085,-99.1885]],
+ blurb:"A hushed pocket of galleries and low houses on the park's southern flank, and the location of Casa Luis Barragán — the UNESCO-listed home of Mexico's greatest modern architect, and the city's best small-scale architectural experience.",
+ best:"Architecture, contemporary galleries, quiet lunches",
+ metro:"Constituyentes (L7), Juanacatlán (L1)",
+ feel:"Residential, arty, calm",
+ tip:"Casa Barragán is guided-tour-only and books out weeks ahead; reserve online before you fly."},
+
+{id:"lomas", name:"Lomas de Chapultepec", es:"Miguel Hidalgo", char:"upscale", pts:[[19.4270,-99.2160],[19.4190,-99.2340]],
+ blurb:"Wooded ravines full of walled mansions, embassies and private clubs, laid out along a curving continuation of Reforma. Not a walking neighbourhood, but home to some destination restaurants and the calmest luxury hotels.",
+ best:"Special-occasion dinners, quiet high-end stays",
+ metro:"None nearby — ride-share territory",
+ feel:"Green, gated, very quiet",
+ tip:"La Once Mil, one of the newest Michelin stars in the city, is up here on Monte Everest."},
+
+{id:"tacubaya", name:"Tacubaya", es:"Miguel Hidalgo", char:"local", pts:[[19.4020,-99.1875]],
+ blurb:"An ancient village swallowed by the city and now a huge transit knot where three metro lines meet, wrapped in market stalls and torta stands. Chaotic, useful, and hiding a couple of genuine landmarks including Barragán's own house on its edge.",
+ best:"Transit connections, market snacking",
+ metro:"Tacubaya (L1/L7/L9) — a major interchange",
+ feel:"Crowded and utilitarian",
+ tip:"If you're crossing the city, this is the transfer that saves you the most time — and the one to keep your bag in front of you at."},
+
+{id:"napoles", name:"Nápoles & WTC", es:"Benito Juárez", char:"local", pts:[[19.3945,-99.1780]],
+ blurb:"A mid-century business district around the World Trade Center tower and the Polyforum Siqueiros, whose exterior carries one of the largest murals on earth. Convention hotels, steady restaurants, and the wide Insurgentes corridor.",
+ best:"Conferences, the Polyforum mural, easy Metrobús access",
+ metro:"San Antonio (L7), Poliforum/Nápoles (Metrobús L1)",
+ feel:"Corporate by day, quiet at night",
+ tip:"Insurgentes is the world's longest avenue in a single city — the Metrobús runs its length and is the fastest surface transport you'll find."},
+
+{id:"delvalle", name:"Del Valle", es:"Benito Juárez", char:"local", pts:[[19.3860,-99.1690],[19.3740,-99.1650]],
+ blurb:"A large, prosperous middle-class grid of tree-lined streets, bakeries and neighbourhood restaurants where a lot of the city actually lives. Safe, unhurried, and increasingly where visitors book apartments when Roma prices bite.",
+ best:"Long stays, family travel, everyday restaurants",
+ metro:"Zapata (L3/L12), División del Norte (L12), Insurgentes Sur (Metrobús)",
+ feel:"Calm, green, quietly comfortable",
+ tip:"The Mítikah mall and the tiny colonial village of Xoco sit on its southern edge, an odd and interesting pairing."},
+
+{id:"narvarte", name:"Narvarte", es:"Benito Juárez", char:"trendy", pts:[[19.3960,-99.1540]],
+ blurb:"The city's most serious eating neighbourhood if you skip the tablecloths: taquerías, cantinas, seafood counters and a dense concentration of the sort of places locals argue about. El Vilsito — a mechanic's shop by day, a legendary al pastor stand by night — is the emblem.",
+ best:"Tacos, cantinas, seafood, no-frills value",
+ metro:"Etiopía (L3), Eugenia (L3), Parque Delta (Metrobús)",
+ feel:"Unpretentious, residential, food-obsessed",
+ tip:"Come hungry after 9pm — this is a night-eating neighbourhood, not a lunch one."},
+
+{id:"mixcoac", name:"Mixcoac & San Pedro", es:"Benito Juárez", char:"local", pts:[[19.3765,-99.1880]],
+ blurb:"Another absorbed colonial village, with a small pyramid site, a stone plaza, a university campus and a big shopping node where Insurgentes and Río Mixcoac cross.",
+ best:"Quiet plazas, shopping, transit south",
+ metro:"Mixcoac (L7/L12), Barranca del Muerto (L7)",
+ feel:"Mixed old-village and modern-corridor",
+ tip:"The Plaza Jacarandas area is lovely in March–April when the jacarandas turn the whole city purple."},
+
+{id:"sanangel", name:"San Ángel", es:"Álvaro Obregón", char:"culture", pts:[[19.3465,-99.1905]],
+ blurb:"Cobbled streets, bougainvillea over stone walls and colonial mansions on the volcanic slope — the prettiest colonial quarter in the south. The Saturday Bazar Sábado fills the Plaza San Jacinto with crafts and painters, and the Rivera–Kahlo studio houses are five minutes away.",
+ best:"Saturday crafts, colonial wandering, long lunches",
+ metro:"Miguel Ángel de Quevedo (L3), then a walk; Metrobús on Insurgentes",
+ feel:"Genteel, touristy in the best way, hilly",
+ tip:"Do San Ángel on Saturday and Coyoacán on Sunday — that's the classic southern weekend, and they're 20 minutes apart."},
+
+{id:"pedregal", name:"Pedregal", es:"Álvaro Obregón", char:"upscale", pts:[[19.3200,-99.2060],[19.3060,-99.2160]],
+ blurb:"Modernist houses built into a black lava field left by the Xitle volcano — an architecturally famous, very wealthy enclave of walls and gardens on the city's southern rim, next to the Perisur mall.",
+ best:"Architecture pilgrimage, destination dining",
+ metro:"None — ride-share",
+ feel:"Silent, green, gated",
+ tip:"Sud 777, a long-standing Michelin star, is out here and works well as a lunch on the way back from Xochimilco."},
+
+{id:"santafe", name:"Santa Fe", es:"Cuajimalpa / Álvaro Obregón", char:"upscale", pts:[[19.3660,-99.2690],[19.3560,-99.2510],[19.3760,-99.2600]],
+ blurb:"A high-rise corporate city built on a former rubbish dump and quarry on the western ridge — glass towers, one of Latin America's largest malls, and almost nothing at street level. Included here mostly so you know to avoid staying here as a tourist.",
+ best:"Business, the mall, mountain views",
+ metro:"None — Ferrocarriles suburban buses and ride-share only",
+ feel:"Car-dependent, corporate, disconnected",
+ tip:"Traffic in and out is genuinely brutal at rush hour; budget 60–90 minutes to the centre."},
+
+{id:"coyoacan", name:"Coyoacán", es:"Coyoacán", char:"culture", pts:[[19.3500,-99.1620],[19.3410,-99.1690],[19.3560,-99.1520]],
+ blurb:"The colonial village where Cortés set up and Frida Kahlo grew up — twin plazas, a coyote fountain, a covered market famous for tostadas, and the cobalt-blue Casa Azul where Kahlo lived and died. Sundays bring balloon sellers, buskers and half the city.",
+ best:"Casa Azul, the market, plazas, weekend atmosphere",
+ metro:"Coyoacán (L3) and Viveros (L3) — both a 15–20 min walk from the plazas",
+ feel:"Villagey, festive, green, crowded at weekends",
+ tip:"Buy Casa Azul tickets online days ahead — walk-ups routinely sell out. Trotsky's house is a five-minute walk away and rarely busy."},
+
+{id:"cu", name:"Ciudad Universitaria", es:"Coyoacán", char:"culture", pts:[[19.3320,-99.1855]],
+ blurb:"UNAM's main campus, a UNESCO World Heritage site: 1950s modernism scattered across lava fields, with the mosaic-clad Central Library, the Olympic stadium mural, a sculpture park in the lava and the excellent MUAC contemporary art museum.",
+ best:"Architecture, murals, contemporary art, student prices",
+ metro:"Universidad (L3), then the free campus shuttle (Pumabús)",
+ feel:"Vast, open, young, easy",
+ tip:"The Espacio Escultórico — huge concrete blocks ringing raw lava — is the most underrated sight in the city."},
+
+{id:"xochimilco", name:"Xochimilco", es:"Xochimilco", char:"green", pts:[[19.2700,-99.1050],[19.2570,-99.0870],[19.2810,-99.1230]],
+ blurb:"The last surviving stretch of the lake and canal system the Aztecs farmed, now a UNESCO site where painted trajinera barges drift past floating gardens with mariachis, micheladas and food boats pulling alongside. Also a working farming zone.",
+ best:"A boat afternoon, chinampa farm tours, birdlife",
+ metro:"Tren Ligero from Tasqueña (L2) to Xochimilco",
+ feel:"Festive and loud at the main docks; silent and rural a few canals over",
+ tip:"Embarcadero Nativitas is the party dock; Cuemanco is the quiet, ecological one. Boats are priced per hour per boat — agree the rate before you step on."},
+
+{id:"tlalpan", name:"Tlalpan", es:"Tlalpan", char:"outer", pts:[[19.2920,-99.1670],[19.2990,-99.1920],[19.2800,-99.1600]],
+ blurb:"Another colonial village centre — a leafy plaza, a 16th-century church, good cantinas — with the pine-forested Bosque de Tlalpan alongside and the Estadio Azteca just to the east.",
+ best:"Forest walks, quiet colonial plaza, football",
+ metro:"Tren Ligero to Estadio Azteca; buses along Calzada de Tlalpan",
+ feel:"Suburban, calm, cooler and greener than the centre",
+ tip:"The Bosque de Tlalpan is the city's best proper walk in the woods — 2,000-plus metres up, so take it slowly."},
+
+{id:"lavilla", name:"La Villa & GAM", es:"Gustavo A. Madero", char:"historic", pts:[[19.4850,-99.1180],[19.5060,-99.1400],[19.4700,-99.1050]],
+ blurb:"The northern pilgrimage district built around the Basílica de Guadalupe, where the country's patron image hangs above a moving walkway that carries millions of visitors past it each year. The old sinking basilica leans beside the new one.",
+ best:"The Basílica complex, the hill chapel and its view",
+ metro:"La Villa-Basílica (L6), Deportivo 18 de Marzo (L3/L6)",
+ feel:"Devotional, busy, non-touristy in the ordinary sense",
+ tip:"Climb the steps to the Capilla del Cerrito for the best free panorama of the northern city."},
+
+{id:"airport", name:"Airport & Venustiano Carranza", es:"Venustiano Carranza", char:"outer", pts:[[19.4340,-99.0790],[19.4270,-99.1090],[19.4420,-99.0950]],
+ blurb:"The zone east of the centre running out to Benito Juárez International (MEX), plus the enormous La Merced market complex on its inner edge — the wholesale belly of the city, where restaurant kitchens buy at dawn.",
+ best:"Flights, La Merced market, cheap airport hotels",
+ metro:"Terminal Aérea (L5), Pantitlán (L1/L5/L9/LA), Merced (L1)",
+ feel:"Functional; the market end is intense and worth it",
+ tip:"Terminal 1 and Terminal 2 are far apart — allow 20–30 minutes and use the Aerotrén (airside) or a taxi between them."},
+
+{id:"iztacalco", name:"Iztacalco & Ciudad Deportiva", es:"Iztacalco", char:"outer", pts:[[19.3980,-99.0950],[19.4050,-99.1150]],
+ blurb:"Mostly residential, but it's where you'll come for a concert or a ball game: the Foro Sol/Estadio GNP, the Palacio de los Deportes dome and the Autódromo Hermanos Rodríguez Formula 1 circuit share one huge sports campus.",
+ best:"Concerts, F1, baseball, big events",
+ metro:"Ciudad Deportiva (L9), Velódromo (L9)",
+ feel:"Quiet streets around a giant event island",
+ tip:"On event nights the metro is far faster than any car — the road exits jam solid for hours."},
+
+{id:"iztapalapa", name:"Iztapalapa", es:"Iztapalapa", char:"outer", pts:[[19.3600,-99.0680],[19.3400,-99.0820],[19.3750,-99.0450]],
+ blurb:"The city's most populous borough — a working-class expanse under the Cerro de la Estrella, where the New Fire ceremony once opened each Aztec 52-year cycle and where an enormous Passion Play now draws millions each Good Friday.",
+ best:"Holy Week processions, Cerro de la Estrella views, cablebús ride",
+ metro:"Constitución de 1917 (L8), Cablebús Línea 2",
+ feel:"Dense, hilly, everyday; not set up for tourism",
+ tip:"The Cablebús cable car over the hills is a cheap, spectacular ride and the easiest way to see this side of the city."},
+
+{id:"azcapotzalco", name:"Azcapotzalco", es:"Azcapotzalco", char:"local", pts:[[19.4830,-99.1850],[19.4700,-99.1620]],
+ blurb:"An old pre-Hispanic capital turned industrial north-west borough, with a pleasant colonial centre, a big convent church, and one of the city's best-loved traditional markets.",
+ best:"Local markets, colonial plaza, no tourists at all",
+ metro:"Azcapotzalco (L6), Ferrería (L6)",
+ feel:"Industrial edges around a village core",
+ tip:"Worth a detour only if you like ordinary neighbourhoods — but that's exactly what makes it pleasant."},
+
+{id:"satelite", name:"Naucalpan & Satélite", es:"Estado de México", char:"outer", pts:[[19.5090,-99.2330],[19.4760,-99.2210],[19.4900,-99.2500]],
+ blurb:"Across the state line in the Estado de México: 1950s middle-class suburbia announced by the Torres de Satélite, five giant coloured concrete prisms by Barragán and Goeritz that split the motorway. Plaza Satélite was one of Latin America's first big malls.",
+ best:"Mid-century design, mall shopping, the towers",
+ metro:"None — Mexibús and ride-share",
+ feel:"Suburban, car-first",
+ tip:"You pass the towers on the way to Tepotzotlán or the Teotihuacán pyramids — worth the two-minute photo stop."}
+];
+
+/* =========================================================================
+   2. POINTS OF INTEREST
+   ========================================================================= */
+const CATS = {
+  star:  {label:"Michelin",        color:"#b7791f", shape:"star",     n:"Michelin Guide"},
+  eat:   {label:"Food & markets",  color:"#c2410c", shape:"circle",   n:"Eating"},
+  sight: {label:"Sights",          color:"#2563a8", shape:"triangle", n:"Famous sights"},
+  museum:{label:"Museums",         color:"#7c3f9e", shape:"square",   n:"Museums & galleries"},
+  shop:  {label:"Shopping",        color:"#0d7f7a", shape:"diamond",  n:"Malls & shopping"},
+  park:  {label:"Parks",           color:"#2f7d4f", shape:"pent",     n:"Parks & open space"},
+  bar:   {label:"Bars",            color:"#be3455", shape:"hex",      n:"Bars & nightlife"}
+};
+
+/* stars: 2 = two Michelin stars, 1 = one star, 0 = formerly starred */
+const POIS = [
+/* ---- Michelin (2026 selection) ---- */
+{n:"Pujol", c:"star", s:2, lat:19.4318, lon:-99.1936, a:"polanco", d:"Enrique Olvera's landmark tasting menu — the ever-aging 'madre' mole is served as two concentric circles of sauce.", m:"Tennyson 133, Polanco · book weeks ahead"},
+{n:"Quintonil", c:"star", s:2, lat:19.4340, lon:-99.1900, a:"polanco", d:"Jorge Vallejo's vegetable-forward modern Mexican; charred avocado tartare with escamoles is the signature.", m:"Isaac Newton 55, Polanco · book weeks ahead"},
+{n:"Rosetta", c:"star", s:1, lat:19.4188, lon:-99.1614, a:"romanorte", d:"Elena Reygadas cooks Italian-inflected Mexican in a crumbling-elegant Roma mansion with a staircase everyone photographs.", m:"Colima 166, Roma Norte"},
+{n:"Máximo", c:"star", s:1, lat:19.4174, lon:-99.1630, a:"romanorte", d:"Market-driven bistro cooking over wood, from Eduardo García — one of the city's most consistently loved tables.", m:"Álvaro Obregón 65, Roma Norte"},
+{n:"Em", c:"star", s:1, lat:19.4155, lon:-99.1580, a:"romanorte", d:"Lucho Martínez's intense, Japanese-influenced contemporary Mexican tasting menu, named for his daughter.", m:"Tonalá 133, Roma Norte"},
+{n:"Expendio de Maíz", c:"star", s:1, lat:19.4142, lon:-99.1627, a:"romanorte", d:"No menu, no sign: they cook heirloom corn masa dishes at you until you say stop. Cash, small, magic.", m:"Av. Yucatán 84, Roma Norte · walk-in, go early"},
+{n:"Esquina Común", c:"star", s:1, lat:19.4160, lon:-99.1745, a:"condesa", d:"A rooftop hidden two floors above a nearly invisible Condesa doorway; produce-led and quietly ambitious.", m:"Fernando Montes de Oca 86, Condesa · reserve via Instagram DM"},
+{n:"Gaba", c:"star", s:1, lat:19.4090, lon:-99.1790, a:"condesa", d:"Chef Víctor Toriz — a daytime café that turns into bold, inventive cooking at night. A 2026 newcomer to the stars.", m:"Av. Mazatlán 190, Condesa"},
+{n:"Masala y Maíz", c:"star", s:1, lat:19.4262, lon:-99.1637, a:"juarez", d:"Mexican, Indian and East African cooking braided together by Norma Listman and Saqib Keval. Unlike anything else here.", m:"Marsella 72, Juárez"},
+{n:"La Once Mil", c:"star", s:1, lat:19.4230, lon:-99.2120, a:"lomas", d:"One of the newest stars in the city, up in the quiet of Lomas de Chapultepec.", m:"Monte Everest 780, Lomas de Chapultepec"},
+{n:"Sud 777", c:"star", s:1, lat:19.3060, lon:-99.2130, a:"pedregal", d:"Garden-to-table creative cooking in the leafy far south — a long-running star and a good pairing with a Xochimilco morning.", m:"Blvd. de la Luz 777, Jardines del Pedregal"},
+{n:"El Califa de León", c:"star", s:0, lat:19.4430, lon:-99.1670, a:"sanrafael", d:"The four-stool taquería that famously won a star in 2024 and held it in 2025; it lost it in the 2026 guide but still grills a superb gaonera.", m:"Ribera de San Cosme 56, San Rafael · cash, standing room"},
+
+/* ---- Food, markets, classics ---- */
+{n:"Contramar", c:"eat", lat:19.4212, lon:-99.1668, a:"romanorte", d:"The city's defining long lunch: tuna tostadas and the half-red, half-green pescado a la talla. Bib Gourmand.", m:"Durango 200, Roma Norte · reserve, go at 2pm"},
+{n:"Molino El Pujol", c:"eat", lat:19.4065, lon:-99.1808, a:"condesa", d:"Olvera's corn mill and casual counter — tortillas from heirloom maize, tamales, and a very good breakfast. Bib Gourmand.", m:"Gral. Benjamín Hill 146, Condesa"},
+{n:"Taquería Los Cocuyos", c:"eat", lat:19.4325, lon:-99.1390, a:"centro", d:"Late-night Centro institution serving suadero and every offal cut from a bubbling copper vat. Bib Gourmand.", m:"Bolívar 57, Centro · cash"},
+{n:"El Vilsito", c:"eat", lat:19.3830, lon:-99.1580, a:"narvarte", d:"Car workshop by day, one of the city's great al pastor trompos by night. Bib Gourmand.", m:"Petén 248, Narvarte · after 8pm"},
+{n:"Comedor Jacinta", c:"eat", lat:19.4300, lon:-99.1970, a:"polanco", d:"Elegant home-style Mexican cooking in Polanco — the accessible way to eat well in the expensive part of town. Bib Gourmand.", m:"Virgilio 40, Polanco"},
+{n:"Mercado de San Juan", c:"eat", lat:19.4306, lon:-99.1440, a:"alameda", d:"The chefs' market: cheeses, jamón, exotic meats and counters where they'll make you a sandwich and pour you a beer at 11am.", m:"Ernesto Pugibet 21 · closes mid-afternoon"},
+{n:"Mercado Medellín", c:"eat", lat:19.4098, lon:-99.1633, a:"romasur", d:"Latin America under one roof — Colombian, Cuban and Venezuelan stalls, tropical fruit, and superb ceviche counters.", m:"Campeche 101, Roma Sur"},
+{n:"Mercado Roma", c:"eat", lat:19.4185, lon:-99.1690, a:"romanorte", d:"A three-floor gourmet food hall — polished and touristy, but a painless first-night dinner with beer on the roof.", m:"Querétaro 225, Roma Norte"},
+{n:"Mercado de La Merced", c:"eat", lat:19.4258, lon:-99.1240, a:"airport", d:"One of the largest markets in the Americas: kilometres of chillies, moles, herbs and fruit. Overwhelming and unforgettable.", m:"Circunvalación s/n · mornings, keep bags in front"},
+{n:"Mercado Jamaica", c:"eat", lat:19.4093, lon:-99.1245, a:"airport", d:"The flower market — open around the clock, an ocean of marigolds before Día de Muertos.", m:"Guillermo Prieto s/n · 24 hours"},
+{n:"Mercado de Coyoacán", c:"eat", lat:19.3512, lon:-99.1625, a:"coyoacan", d:"Famous for tostadas piled with ceviche, pata and tinga — order at the busiest counter and don't overthink it.", m:"Ignacio Allende s/n, Coyoacán"},
+{n:"Churrería El Moro", c:"eat", lat:19.4326, lon:-99.1417, a:"centro", d:"Churros and thick chocolate since 1935, still open absurdly late at the original Eje Central counter.", m:"Eje Central Lázaro Cárdenas 42"},
+{n:"Café de Tacuba", c:"eat", lat:19.4362, lon:-99.1370, a:"centro", d:"Tiled, chandeliered and open since 1912 — come for the room, the tamales and the mid-afternoon estudiantina singers.", m:"Tacuba 28, Centro"},
+{n:"Cantina La Ópera", c:"eat", lat:19.4353, lon:-99.1417, a:"centro", d:"Gilded 19th-century cantina with a bullet hole in the ceiling said to be Pancho Villa's.", m:"5 de Mayo 10, Centro"},
+{n:"Panadería Rosetta", c:"eat", lat:19.4197, lon:-99.1620, a:"romanorte", d:"The guava roll and the cardamom bun that launched a thousand queues. Two branches, both in Roma.", m:"Colima 179, Roma Norte"},
+{n:"Pastelería Ideal", c:"eat", lat:19.4340, lon:-99.1440, a:"alameda", d:"A cavernous 1920s bakery where you grab a tray and tongs and wade in among the pan dulce.", m:"16 de Septiembre 18, Centro"},
+{n:"Los Panchos", c:"eat", lat:19.4308, lon:-99.1785, a:"anzures", d:"Carnitas by the kilo, with pig-shaped ceramics everywhere — a family Sunday institution since 1945.", m:"Tolstoi 9, Anzures"},
+{n:"El Cardenal", c:"eat", lat:19.4336, lon:-99.1382, a:"centro", d:"The city's benchmark breakfast: hot chocolate whisked at the table, nata with sweet bread, huevos with salsa borracha.", m:"Palma 23, Centro · queue on weekends"},
+{n:"Nicos", c:"eat", lat:19.4750, lon:-99.1830, a:"azcapotzalco", d:"A 1957 family restaurant in a northern suburb doing the finest traditional Mexican lunch in the city. Worth the taxi.", m:"Av. Cuitláhuac 3102, Clavería"},
+{n:"Fonda Margarita", c:"eat", lat:19.3840, lon:-99.1720, a:"delvalle", d:"Clay pots of frijoles with egg cooked over charcoal since 5:30am, then closed by lunchtime. A pilgrimage breakfast.", m:"Adolfo Prieto 1364B · 5:30–11:30am, cash"},
+{n:"El Turix", c:"eat", lat:19.4310, lon:-99.1900, a:"polanco", d:"A tiny standing counter doing cochinita pibil tacos and panuchos in the middle of luxury Polanco.", m:"Emilio Castelar 212, Polanco · cash"},
+{n:"Lardo", c:"eat", lat:19.4155, lon:-99.1785, a:"condesa", d:"Elena Reygadas's Mediterranean daytime spot — wood-oven flatbreads and the best café-lunch in Condesa.", m:"Agustín Melgar 6, Condesa"},
+{n:"Galanga Thai House", c:"eat", lat:19.4155, lon:-99.1592, a:"romanorte", d:"A small Roma Thai kitchen with a devoted following and a Bib Gourmand — a good break from mole.", m:"Roma Norte"},
+
+/* ---- Famous sights ---- */
+{n:"Zócalo", c:"sight", lat:19.4326, lon:-99.1332, a:"centro", d:"The vast main square — one of the world's largest — with the giant flag raised and lowered by soldiers each day.", m:"Free · Metro Zócalo"},
+{n:"Catedral Metropolitana", c:"sight", lat:19.4341, lon:-99.1332, a:"centro", d:"Three centuries of building, visibly sinking into the old lakebed. Climb the bell tower for the best Zócalo view.", m:"Free entry · tower tour small fee"},
+{n:"Templo Mayor", c:"sight", lat:19.4348, lon:-99.1315, a:"centro", d:"The excavated main pyramid of Tenochtitlán, found by accident by electrical workers in 1978, with a superb museum.", m:"Closed Mondays"},
+{n:"Palacio Nacional", c:"sight", lat:19.4326, lon:-99.1310, a:"centro", d:"Diego Rivera's staircase murals telling the whole history of Mexico. Free, but bring ID and check it's open to visitors.", m:"Free with ID · access varies"},
+{n:"Palacio de Bellas Artes", c:"sight", lat:19.4352, lon:-99.1412, a:"alameda", d:"Marble art-nouveau outside, art-deco inside, murals by Rivera, Orozco and Siqueiros upstairs, and the Ballet Folklórico on stage.", m:"Closed Mondays · Ballet Folklórico Wed & Sun"},
+{n:"Torre Latinoamericana", c:"sight", lat:19.4338, lon:-99.1405, a:"alameda", d:"1956 skyscraper that survived every big earthquake; the 44th-floor deck is the classic city panorama.", m:"Open late · go at dusk"},
+{n:"Casa de los Azulejos", c:"sight", lat:19.4342, lon:-99.1400, a:"centro", d:"An 18th-century palace sheathed in blue-and-white Puebla tiles, now a Sanborns with an Orozco mural on the stairs.", m:"Madero 4 · free to walk in"},
+{n:"Monumento a la Revolución", c:"sight", lat:19.4364, lon:-99.1546, a:"alameda", d:"A colossal deco arch, originally meant to be a parliament; a glass lift runs to the viewing platform on top.", m:"Lift ticket · fountains below"},
+{n:"Ángel de la Independencia", c:"sight", lat:19.4270, lon:-99.1677, a:"juarez", d:"The golden victory column on Reforma, and the place the whole city floods to when the national team wins.", m:"Free · roundabout on Reforma"},
+{n:"Castillo de Chapultepec", c:"sight", lat:19.4205, lon:-99.1817, a:"chapultepec", d:"The only royal castle in the Americas, on a hilltop with Maximilian's rooms, huge murals and views down Reforma.", m:"Closed Mondays · steep 15-min walk up"},
+{n:"Basílica de Guadalupe", c:"sight", lat:19.4847, lon:-99.1177, a:"lavilla", d:"The most visited Catholic shrine on earth; the tilma hangs above three moving walkways so the crowd keeps flowing.", m:"Free · vast crowds around 12 December"},
+{n:"Plaza Garibaldi", c:"sight", lat:19.4400, lon:-99.1385, a:"lagunilla", d:"Mariachi square: bands wait in uniform and you pay by the song. Touristy, unrepeatable, best before midnight.", m:"Take a taxi in and out"},
+{n:"Arena México", c:"sight", lat:19.4232, lon:-99.1533, a:"doctores", d:"The 16,000-seat home of lucha libre — masks, villains, flying elbows and a crowd that's half the show.", m:"Tue, Fri & Sun · buy ahead"},
+{n:"Estadio Azteca", c:"sight", lat:19.3029, lon:-99.1505, a:"tlalpan", d:"The only stadium to host two World Cup finals, and the stage for Maradona's two 1986 goals.", m:"Tren Ligero: Estadio Azteca"},
+{n:"Biblioteca Vasconcelos", c:"sight", lat:19.4460, lon:-99.1520, a:"guerrero", d:"A 'megalibrary' of glass floors and stacks hanging in mid-air around a suspended whale skeleton. Free and astonishing.", m:"Free · closed Mondays"},
+{n:"Plaza de las Tres Culturas", c:"sight", lat:19.4514, lon:-99.1382, a:"tlatelolco", d:"Aztec ruins, a colonial church and modernist towers in one view — and the site of the 1968 student massacre.", m:"Free · small memorial museum"},
+{n:"Kiosco Morisco", c:"sight", lat:19.4506, lon:-99.1622, a:"smr", d:"A Moorish-revival iron pavilion built for an 1884 world's fair and brought home to this leafy neighbourhood square.", m:"Free · Alameda de Santa María"},
+{n:"Casa Luis Barragán", c:"sight", lat:19.4113, lon:-99.1866, a:"sanmiguel", d:"UNESCO-listed home of Mexico's master of light and colour — pink walls, a roof terrace open to the sky, total silence.", m:"Guided tours only · book weeks ahead"},
+{n:"Torres de Satélite", c:"sight", lat:19.5115, lon:-99.2340, a:"satelite", d:"Five coloured concrete prisms up to 52m tall, by Barragán and Goeritz, planted in the middle of the motorway in 1958.", m:"Roadside · photo stop en route north"},
+{n:"UNAM Central Library", c:"sight", lat:19.3345, lon:-99.1861, a:"cu", d:"A windowless block covered on all four sides by Juan O'Gorman's stone mosaic of Mexican history. UNESCO listed.", m:"Free · Metro Universidad"},
+{n:"Espacio Escultórico", c:"sight", lat:19.3185, lon:-99.1835, a:"cu", d:"Sixty-four concrete wedges ringing a field of raw black lava — monumental land art hidden on the university campus.", m:"Free · open daylight hours"},
+{n:"Trajineras de Xochimilco", c:"sight", lat:19.2635, lon:-99.1055, a:"xochimilco", d:"Painted flat-bottomed boats poled through Aztec-era canals, with mariachi boats, food boats and beer boats alongside.", m:"Embarcadero Nativitas · per-boat hourly rate, agree first"},
+{n:"Cablebús Línea 2", c:"sight", lat:19.3600, lon:-99.0700, a:"iztapalapa", d:"A 10.6 km cable car gliding above the rooftops of the eastern city — one of the great cheap rides anywhere.", m:"Metro fare · Constitución de 1917"},
+{n:"Plaza Hidalgo & Jardín Centenario", c:"sight", lat:19.3500, lon:-99.1620, a:"coyoacan", d:"Coyoacán's twin squares with the coyote fountain, balloon sellers, churro carts and weekend crowds.", m:"Free · best Sunday afternoon"},
+{n:"Plaza San Jacinto", c:"sight", lat:19.3462, lon:-99.1902, a:"sanangel", d:"Cobbled colonial square that fills with the Bazar Sábado craft market and open-air painters every Saturday.", m:"Saturdays are the event"},
+{n:"Polyforum Siqueiros", c:"sight", lat:19.3927, lon:-99.1770, a:"napoles", d:"A twelve-sided building wrapped in 'The March of Humanity', one of the largest murals ever painted.", m:"Insurgentes Sur 701"},
+{n:"Autódromo Hermanos Rodríguez", c:"sight", lat:19.4042, lon:-99.0907, a:"iztacalco", d:"The Mexican Grand Prix circuit, famous for the stadium section where the crowd surrounds the cars.", m:"F1 usually late October"},
+{n:"Palacio Postal", c:"sight", lat:19.4361, lon:-99.1400, a:"centro", d:"A working post office that looks like a Venetian palace, with a golden marble staircase and bronze balustrades.", m:"Free · walk in during office hours"},
+{n:"Antiguo Colegio de San Ildefonso", c:"sight", lat:19.4372, lon:-99.1310, a:"centro", d:"The colonial college where the Mexican mural movement began — Orozco's and Rivera's earliest walls are here.", m:"Closed Mondays"},
+{n:"Capilla del Cerrito", c:"sight", lat:19.4862, lon:-99.1160, a:"lavilla", d:"The hill chapel above the Basílica, up a switchback of steps and gardens, with the best free view in the north.", m:"Free · 10 min climb"},
+
+/* ---- Museums ---- */
+{n:"Museo Nacional de Antropología", c:"museum", lat:19.4260, lon:-99.1863, a:"chapultepec", d:"The single most important museum in the country: the Aztec Sun Stone, the Maya rooms, Teotihuacán and much more. Give it three hours.", m:"Closed Mondays · arrive at opening"},
+{n:"Museo Frida Kahlo (Casa Azul)", c:"museum", lat:19.3554, lon:-99.1626, a:"coyoacan", d:"The cobalt-blue house where Kahlo was born, painted and died, with her studio, her corsets and her garden intact.", m:"Timed tickets online — sells out days ahead"},
+{n:"Museo Soumaya", c:"museum", lat:19.4406, lon:-99.2044, a:"polanco", d:"A silver, hourglass-shaped landmark holding Carlos Slim's collection, including a big group of Rodin bronzes. Free.", m:"Free entry · Plaza Carso"},
+{n:"Museo Jumex", c:"museum", lat:19.4411, lon:-99.2056, a:"polanco", d:"The country's sharpest contemporary art programme, in a sawtooth travertine box by David Chipperfield, next door to the Soumaya.", m:"Closed Mondays"},
+{n:"Museo Tamayo", c:"museum", lat:19.4257, lon:-99.1823, a:"chapultepec", d:"Rufino Tamayo's international modern collection in a brutalist pavilion folded into the park.", m:"Closed Mondays"},
+{n:"Museo de Arte Moderno", c:"museum", lat:19.4249, lon:-99.1808, a:"chapultepec", d:"Round mid-century galleries holding Mexican modernism — including Kahlo's 'The Two Fridas'.", m:"Closed Mondays"},
+{n:"MUNAL", c:"museum", lat:19.4368, lon:-99.1394, a:"centro", d:"The national art museum: five centuries of Mexican painting in a palatial 1900s building with a grand staircase.", m:"Closed Mondays"},
+{n:"Museo Mural Diego Rivera", c:"museum", lat:19.4363, lon:-99.1478, a:"alameda", d:"Built around a single mural — 'Dream of a Sunday Afternoon in the Alameda' — moved here after the 1985 earthquake.", m:"Small, cheap, 20 minutes"},
+{n:"Casa Estudio Diego Rivera y Frida Kahlo", c:"museum", lat:19.3468, lon:-99.1918, a:"sanangel", d:"Two functionalist houses joined by a rooftop bridge, built by Juan O'Gorman in 1931 — a landmark of modern architecture.", m:"Closed Mondays · San Ángel"},
+{n:"Museo Casa de León Trotsky", c:"museum", lat:19.3575, lon:-99.1608, a:"coyoacan", d:"The fortified house where Trotsky lived and was assassinated in 1940, left much as it was, bullet holes included.", m:"Closed Mondays · 5 min from Casa Azul"},
+{n:"MUAC", c:"museum", lat:19.3187, lon:-99.1848, a:"cu", d:"UNAM's contemporary art museum — a long glass wedge on the campus cultural strip, with strong Latin American shows.", m:"Closed Mondays · Metro Universidad"},
+{n:"Museo Anahuacalli", c:"museum", lat:19.3345, lon:-99.1500, a:"coyoacan", d:"Diego Rivera's black volcanic-stone temple built to house his pre-Hispanic collection — cave-like, strange, wonderful.", m:"Closed Mondays · shared ticket with Casa Azul"},
+{n:"Museo Memoria y Tolerancia", c:"museum", lat:19.4353, lon:-99.1449, a:"alameda", d:"A serious, well-designed museum on genocide and human rights, facing the Alameda.", m:"Closed Mondays"},
+{n:"Museo Franz Mayer", c:"museum", lat:19.4372, lon:-99.1450, a:"alameda", d:"Decorative arts in a 16th-century hospital, with one of the loveliest cloister cafés in the city.", m:"Closed Mondays"},
+{n:"Papalote Museo del Niño", c:"museum", lat:19.4085, lon:-99.2012, a:"chapultepec", d:"The big hands-on children's museum in the park's second section, with a dome cinema.", m:"Chapultepec 2ª sección"},
+{n:"Museo de Geología", c:"museum", lat:19.4520, lon:-99.1650, a:"smr", d:"An 1890s cabinet of meteorites, fossils and minerals, with a spectacular wrought-iron staircase.", m:"Closed Mondays · Santa María la Ribera"},
+{n:"Museo Universitario del Chopo", c:"museum", lat:19.4471, lon:-99.1585, a:"smr", d:"An art-nouveau iron-and-glass hall shipped from Germany, now UNAM's most alternative exhibition space.", m:"Closed Mondays"},
+{n:"Acuario Inbursa", c:"museum", lat:19.4418, lon:-99.2062, a:"polanco", d:"Latin America's largest aquarium, descending four floors below ground next to Plaza Carso.", m:"Good rainy-afternoon option with kids"},
+
+/* ---- Shopping ---- */
+{n:"Avenida Presidente Masaryk", c:"shop", lat:19.4322, lon:-99.1930, a:"polanco", d:"The luxury flagship street — the local Bond Street or Rodeo Drive, with cafés between the boutiques.", m:"Polanco · walkable strip"},
+{n:"Antara Fashion Hall", c:"shop", lat:19.4404, lon:-99.2000, a:"polanco", d:"Open-air upscale mall with international labels, cinemas and a lot of restaurants.", m:"Ejército Nacional 843"},
+{n:"El Palacio de Hierro Polanco", c:"shop", lat:19.4340, lon:-99.2004, a:"polanco", d:"Mexico's flagship luxury department store — beauty hall, designer floors and a good food court.", m:"Moliere 222"},
+{n:"Plaza Carso", c:"shop", lat:19.4400, lon:-99.2040, a:"polanco", d:"Mall attached to the Soumaya and Jumex museums — the easy way to combine shopping with world-class art.", m:"Next to Museo Soumaya"},
+{n:"Centro Santa Fe", c:"shop", lat:19.3654, lon:-99.2726, a:"santafe", d:"One of the largest malls in Latin America — several hundred shops, an ice rink and a serious traffic problem.", m:"Santa Fe · avoid at rush hour"},
+{n:"Perisur", c:"shop", lat:19.3040, lon:-99.1900, a:"pedregal", d:"The big southern mall, handy if you're already down at Perisur or heading to the Pedregal.", m:"Periférico Sur"},
+{n:"Mítikah", c:"shop", lat:19.3618, lon:-99.1650, a:"delvalle", d:"The newest big vertical mall and tower complex, wrapped around the tiny surviving colonial village of Xoco.", m:"Metro Coyoacán / Xoco"},
+{n:"Galerías Insurgentes", c:"shop", lat:19.3708, lon:-99.1780, a:"mixcoac", d:"Solid mid-market mall on the Insurgentes corridor, easy to reach by Metrobús.", m:"Insurgentes Sur"},
+{n:"Parque Delta", c:"shop", lat:19.4008, lon:-99.1553, a:"narvarte", d:"Built on the old Parque Delta baseball stadium; the most convenient mall to Roma and Condesa.", m:"Metro Etiopía"},
+{n:"Reforma 222", c:"shop", lat:19.4288, lon:-99.1626, a:"juarez", d:"A central mall on Reforma with a cinema and food — useful more than exciting, but very well placed.", m:"Paseo de la Reforma 222"},
+{n:"Plaza Satélite", c:"shop", lat:19.5100, lon:-99.2330, a:"satelite", d:"The pioneering 1971 suburban mall in the Estado de México, still enormous and still busy.", m:"Naucalpan · near the Torres"},
+{n:"La Ciudadela craft market", c:"shop", lat:19.4297, lon:-99.1489, a:"alameda", d:"Folk art and crafts from every state under one roof — the sane place to buy alebrijes, textiles and silver.", m:"Balderas · daily, bargain politely"},
+{n:"Bazar Sábado", c:"shop", lat:19.3465, lon:-99.1905, a:"sanangel", d:"Saturday-only crafts and art market on the San Ángel plaza, plus painters selling in the square outside.", m:"Saturdays 10am–7pm"},
+{n:"Álvaro Obregón boutiques", c:"shop", lat:19.4180, lon:-99.1655, a:"romanorte", d:"Roma's spine: independent design shops, bookstores, vintage and concept stores between the cafés.", m:"Roma Norte · walk it end to end"},
+{n:"Centro Coyoacán", c:"shop", lat:19.3452, lon:-99.1497, a:"coyoacan", d:"Big everyday mall a short ride from the Coyoacán plazas, with a cinema and supermarkets.", m:"Coyoacán"},
+
+/* ---- Parks & green ---- */
+{n:"Parque México", c:"park", lat:19.4113, lon:-99.1717, a:"condesa", d:"Condesa's oval green heart, laid out on a 1920s racetrack — deco fountains, dog walkers, and an open-air theatre.", m:"Free · Ámsterdam loop"},
+{n:"Parque España", c:"park", lat:19.4155, lon:-99.1730, a:"condesa", d:"The smaller of Condesa's two parks, with a playground, skate ramps and cafés along the edge.", m:"Free"},
+{n:"Alameda Central", c:"park", lat:19.4361, lon:-99.1446, a:"alameda", d:"The oldest public park in the Americas, laid out in 1592 — fountains, marble benches and Sunday crowds.", m:"Free · Metro Bellas Artes"},
+{n:"Lago de Chapultepec", c:"park", lat:19.4185, lon:-99.1888, a:"chapultepec", d:"Rowing boats and pedalos on the park lake, with the castle on the hill above.", m:"Boats by the half hour"},
+{n:"Viveros de Coyoacán", c:"park", lat:19.3530, lon:-99.1740, a:"coyoacan", d:"A working tree nursery that doubles as the city's favourite jogging park, full of very bold squirrels.", m:"Free · 6am–6pm"},
+{n:"Bosque de Tlalpan", c:"park", lat:19.2960, lon:-99.1900, a:"tlalpan", d:"Pine and oak woodland on the southern slopes with real trails — the closest thing to a hike inside the city.", m:"Free · mornings"},
+{n:"Parque Hundido", c:"park", lat:19.3805, lon:-99.1780, a:"napoles", d:"A 'sunken' park in an old clay quarry, dotted with replicas of pre-Hispanic sculpture.", m:"Free · Insurgentes Sur"},
+{n:"Parque Ecológico Xochimilco", c:"park", lat:19.2865, lon:-99.1030, a:"xochimilco", d:"The quiet, birdwatching side of the canals at Cuemanco — no mariachis, plenty of herons.", m:"Cuemanco · weekend market nearby"},
+{n:"Bosque de San Juan de Aragón", c:"park", lat:19.4560, lon:-99.0830, a:"lavilla", d:"The big northern park — lake, zoo and running paths, almost entirely local.", m:"Free · GAM"},
+
+/* ---- Bars & nightlife ---- */
+{n:"Handshake Speakeasy", c:"bar", lat:19.4272, lon:-99.1650, a:"juarez", d:"Ranked at the very top of the World's 50 Best Bars — theatrical, technical cocktails behind an unmarked door.", m:"Amberes 65, Juárez · reserve well ahead"},
+{n:"Hanky Panky Cocktail Bar", c:"bar", lat:19.4290, lon:-99.1585, a:"juarez", d:"The speakeasy that started the city's cocktail boom — you're let in through a fridge door in a taquería.", m:"Turín 52, Juárez · reservation only"},
+{n:"Licorería Limantour", c:"bar", lat:19.4177, lon:-99.1642, a:"romanorte", d:"Roma's long-running world-ranked bar; the Margarita Al Pastor is the drink to order.", m:"Álvaro Obregón 106, Roma Norte"},
+{n:"Baltra Bar", c:"bar", lat:19.4128, lon:-99.1740, a:"condesa", d:"A tiny Darwin-themed cocktail bar on Parque México — precise drinks, no scene.", m:"Iztaccíhuatl 36D, Condesa"},
+{n:"Salón Tenampa", c:"bar", lat:19.4400, lon:-99.1390, a:"lagunilla", d:"The mural-covered cantina on Plaza Garibaldi where mariachi has been played since 1925.", m:"Plaza Garibaldi · cash for songs"},
+{n:"Pulquería Las Duelistas", c:"bar", lat:19.4298, lon:-99.1450, a:"alameda", d:"Psychedelic-painted pulquería serving the fermented agave drink in flavours like oat and guava.", m:"Aranda 30, Centro · afternoons"},
+{n:"Zona Rosa nightlife", c:"bar", lat:19.4258, lon:-99.1650, a:"juarez", d:"Calle Amberes and around: the historic centre of LGBTQ+ nightlife, plus Koreatown karaoke and barbecue.", m:"Metro Insurgentes"}
+];
+
+/* =========================================================================
+   3. DAY TRIPS (region view)
+   ========================================================================= */
+const TRIPS = [
+{n:"Teotihuacán", c:"sight", lat:19.6925, lon:-98.8438, t:"1h NE · 50 km",
+ d:"The Pyramids of the Sun and Moon along the Avenue of the Dead — a city of 100,000 people that was already ruins when the Aztecs found it. Go at opening or take a dawn balloon flight over it.",
+ m:"Closed no days but hot by 11am · bring a hat, water and sunscreen"},
+{n:"Tepotzotlán", c:"sight", lat:19.7180, lon:-99.2230, t:"1h N · 45 km",
+ d:"A Pueblo Mágico built around one of the most extravagant baroque churches in the Americas, now the national viceregal museum. Easy half day.",
+ m:"Combine with the Torres de Satélite on the way out"},
+{n:"Tepoztlán", c:"sight", lat:18.9850, lon:-99.0990, t:"1.5h S · 80 km",
+ d:"A mountain-ringed Pueblo Mágico with a crumbling convent, a great weekend market and a steep hour-long climb to the Tepozteco pyramid on a cliff above town.",
+ m:"Warmer than the city · weekends get busy"},
+{n:"Cuernavaca", c:"sight", lat:18.9210, lon:-99.2340, t:"1.5h S · 90 km",
+ d:"The 'city of eternal spring' — Cortés's palace with a Rivera mural, the Borda gardens, and a warm climate the capital escapes to.",
+ m:"Often paired with Tepoztlán in one day"},
+{n:"Puebla & Cholula", c:"sight", lat:19.0530, lon:-98.2560, t:"2h E · 130 km",
+ d:"A UNESCO colonial centre of tiled façades and mole poblano, next to Cholula's Great Pyramid — the largest by volume on earth, with a church perched on top and volcano views behind.",
+ m:"Doable as a long day; better overnight"},
+{n:"Valle de Bravo", c:"park", lat:19.1950, lon:-100.1310, t:"2.5h W · 155 km",
+ d:"A cobbled lake town of sailing, paragliding and pine forest — and the gateway to the monarch butterfly sanctuaries from November to March.",
+ m:"Weekend traffic is heavy both ways"},
+{n:"Taxco", c:"sight", lat:18.5560, lon:-99.6050, t:"3h SW · 170 km",
+ d:"A white silver-mining town poured down a mountainside, with a pink baroque church at the top and silver workshops all the way down.",
+ m:"Steep and walkable · overnight is worth it"},
+{n:"Malinalco", c:"sight", lat:18.9470, lon:-99.4950, t:"2h SW · 100 km",
+ d:"A small Aztec temple carved directly out of the rock above a warm valley town — the eagle-and-jaguar warrior chamber is unique.",
+ m:"Steps up to the site · quiet midweek"},
+{n:"Tula", c:"sight", lat:20.0620, lon:-99.3400, t:"1.5h N · 90 km",
+ d:"The Toltec capital, guarded by four-metre stone warriors — the Atlantes — standing on top of the main pyramid.",
+ m:"Can be combined with Tepotzotlán"},
+{n:"Real del Monte & Pachuca", c:"eat", lat:20.1370, lon:-98.6730, t:"1.5h NE · 100 km",
+ d:"A Cornish mining town in Mexico: pine forest, red roofs, an English cemetery, and pastes — pasties brought by Cornish miners in the 1820s.",
+ m:"Cool and often foggy · take a jacket"},
+{n:"Popocatépetl & Iztaccíhuatl", c:"park", lat:19.1000, lon:-98.6400, t:"2h SE · 110 km",
+ d:"The two great volcanoes: Popo is active and closed to climbers, but the Paso de Cortés between them is reachable and the views are enormous.",
+ m:"Izta-Popo national park · check volcano alert level"},
+{n:"Nevado de Toluca", c:"park", lat:19.1085, lon:-99.7580, t:"2.5h W · 135 km",
+ d:"Drive almost to 4,200 m and walk into the crater of an extinct volcano holding two lakes. Thin air, huge landscape.",
+ m:"Altitude is serious · go early, dress warm"},
+{n:"Desierto de los Leones", c:"park", lat:19.3070, lon:-99.3110, t:"45 min SW · 25 km",
+ d:"A 17th-century Carmelite monastery hidden in a fir forest inside the city limits — the easiest escape from the smog.",
+ m:"Cool and damp · good short hikes"},
+{n:"Grutas de Tolantongo", c:"park", lat:20.6480, lon:-98.9840, t:"4h N · 190 km",
+ d:"Turquoise thermal pools terraced up a canyon wall, plus a hot river and caves. Spectacular, and far — an overnight, not a day trip.",
+ m:"Cash only · book lodging ahead"},
+{n:"Xochimilco (in city)", c:"park", lat:19.2635, lon:-99.1055, t:"1h S · in the city",
+ d:"If you only have a half day, the canals are the closest thing to a trip out of town without leaving Mexico City.",
+ m:"Tren Ligero from Tasqueña"}
+];
+
+/* =========================================================================
+   4. BASE GEOMETRY — urban footprint + main roads (simplified)
+   ========================================================================= */
+const CITY_BOUND = [
+[19.545,-99.245],[19.540,-99.200],[19.527,-99.150],[19.520,-99.100],[19.482,-99.055],
+[19.452,-99.030],[19.412,-99.028],[19.366,-99.030],[19.330,-99.045],[19.300,-99.060],
+[19.266,-99.074],[19.245,-99.104],[19.244,-99.140],[19.264,-99.180],[19.274,-99.200],
+[19.300,-99.226],[19.320,-99.246],[19.336,-99.270],[19.356,-99.291],[19.386,-99.296],
+[19.406,-99.281],[19.431,-99.266],[19.462,-99.261],[19.502,-99.258]
+];
+
+const ROADS = [
+{n:"Paseo de la Reforma", w:3.2, pts:[[19.4180,-99.2340],[19.4250,-99.2140],[19.4245,-99.1975],[19.4265,-99.1830],[19.4271,-99.1676],[19.4310,-99.1565],[19.4358,-99.1470],[19.4420,-99.1430],[19.4520,-99.1370],[19.4620,-99.1290]]},
+{n:"Av. Insurgentes", w:2.8, pts:[[19.4780,-99.1520],[19.4560,-99.1545],[19.4430,-99.1560],[19.4310,-99.1565],[19.4235,-99.1633],[19.4100,-99.1710],[19.3930,-99.1760],[19.3760,-99.1830],[19.3600,-99.1855],[19.3460,-99.1880],[19.3300,-99.1830],[19.3040,-99.1880]]},
+{n:"Calzada de Tlalpan", w:2.6, pts:[[19.4250,-99.1370],[19.4100,-99.1390],[19.3900,-99.1420],[19.3600,-99.1470],[19.3300,-99.1500],[19.3030,-99.1505],[19.2900,-99.1600]]},
+{n:"Viaducto Miguel Alemán", w:2.4, pts:[[19.4030,-99.1900],[19.4010,-99.1700],[19.3995,-99.1450],[19.4000,-99.1200],[19.4060,-99.0930],[19.4180,-99.0760]]},
+{n:"Anillo Periférico", w:2.6, pts:[[19.5120,-99.2320],[19.4800,-99.2400],[19.4500,-99.2440],[19.4200,-99.2450],[19.3900,-99.2440],[19.3650,-99.2360],[19.3400,-99.2160],[19.3120,-99.1930],[19.2960,-99.1600],[19.2870,-99.1180],[19.2900,-99.0900]]},
+{n:"Circuito Interior", w:2.0, pts:[[19.4400,-99.1830],[19.4230,-99.1760],[19.4080,-99.1830],[19.4020,-99.1620],[19.4030,-99.1400],[19.4160,-99.1200],[19.4400,-99.1150],[19.4560,-99.1350],[19.4600,-99.1650],[19.4520,-99.1830],[19.4400,-99.1830]]},
+{n:"Calzada México-Tacuba", w:2.0, pts:[[19.4430,-99.1560],[19.4470,-99.1750],[19.4520,-99.1950],[19.4560,-99.2140]]},
+{n:"Eje Central", w:2.0, pts:[[19.4700,-99.1400],[19.4520,-99.1405],[19.4350,-99.1412],[19.4180,-99.1420],[19.3950,-99.1430]]}
+];
+
+/* Small drawn features (decoration inside cells) */
+const FEATURES = [
+{k:"lake", pts:[[19.4196,-99.1896],[19.4207,-99.1872],[19.4188,-99.1856],[19.4170,-99.1876],[19.4178,-99.1898]]},
+{k:"park", pts:[[19.4370,-99.1470],[19.4373,-99.1425],[19.4348,-99.1422],[19.4345,-99.1468]]},
+{k:"park", pts:[[19.4135,-99.1740],[19.4128,-99.1695],[19.4090,-99.1700],[19.4095,-99.1745]]},
+{k:"park", pts:[[19.3560,-99.1770],[19.3555,-99.1710],[19.3505,-99.1715],[19.3510,-99.1775]]},
+{k:"park", pts:[[19.3020,-99.1960],[19.3010,-99.1830],[19.2900,-99.1840],[19.2905,-99.1965]]},
+{k:"runway", pts:[[19.4460,-99.0830],[19.4230,-99.0740]]},
+{k:"runway", pts:[[19.4455,-99.0855],[19.4225,-99.0765]]}
+];
+/* Xochimilco canal grid */
+const CANALS = (()=>{ const out=[]; for(let i=0;i<9;i++){ const lat=19.2480+i*0.0055;
+    out.push([[lat,-99.1240],[lat+0.0016,-99.0820]]); }
+  for(let j=0;j<10;j++){ const lon=-99.1230+j*0.0046;
+    out.push([[19.2470,lon],[19.2960,lon+0.0020]]); } return out; })();
+
+/* =========================================================================
+   5. GEOMETRY — projection + clipped zone diagram
+   ========================================================================= */
+const LAT0=19.39, LON0=-99.16, SC=1000, KX=Math.cos(LAT0*Math.PI/180);
+const px=(lat,lon)=>({x:(lon-LON0)*KX*SC, y:-(lat-LAT0)*SC});
+
+function polyArea(p){let a=0;for(let i=0,n=p.length;i<n;i++){const q=p[(i+1)%n];a+=p[i].x*q.y-q.x*p[i].y}return a/2}
+function polyCentroid(p){
+  let a=0,cx=0,cy=0;
+  for(let i=0,n=p.length;i<n;i++){const q=p[(i+1)%n],f=p[i].x*q.y-q.x*p[i].y;a+=f;cx+=(p[i].x+q.x)*f;cy+=(p[i].y+q.y)*f}
+  a/=2; if(Math.abs(a)<1e-9)return{x:p[0].x,y:p[0].y,a:0};
+  return {x:cx/(6*a), y:cy/(6*a), a:Math.abs(a)};
+}
+/* Sutherland–Hodgman clip against half-plane n·x <= c. Edge tags: b=city edge, c=cut */
+function clipHalf(poly,nx,ny,c){
+  const out=[],n=poly.length;
+  for(let i=0;i<n;i++){
+    const A=poly[i],B=poly[(i+1)%n];
+    const da=nx*A.x+ny*A.y-c, db=nx*B.x+ny*B.y-c;
+    if(da<=0) out.push({x:A.x,y:A.y,e:A.e});
+    if((da<0&&db>0)||(da>0&&db<0)){
+      const t=da/(da-db);
+      out.push({x:A.x+t*(B.x-A.x), y:A.y+t*(B.y-A.y), e: da<0?'c':A.e});
+    }
+  }
+  return out;
+}
+
+/* Build the zone diagram: every seed point gets a cell; cells of the same area
+   are drawn as one zone (interior seams are not stroked). */
+const BOUND = CITY_BOUND.map(([la,lo])=>{const p=px(la,lo);return{x:p.x,y:p.y,e:'b'}});
+const SITES=[]; AREAS.forEach((a,ai)=>a.pts.forEach(([la,lo])=>{const p=px(la,lo);SITES.push({x:p.x,y:p.y,ai,id:a.id})}));
+
+function buildZones(){
+  const cells=SITES.map(()=>null);
+  for(let i=0;i<SITES.length;i++){
+    let poly=BOUND.slice();
+    const pi=SITES[i];
+    for(let j=0;j<SITES.length && poly.length>2;j++){
+      if(i===j)continue;
+      const pj=SITES[j], nx=pj.x-pi.x, ny=pj.y-pi.y;
+      const c=(nx*(pi.x+pj.x)+ny*(pi.y+pj.y))/2;
+      poly=clipHalf(poly,nx,ny,c);
+    }
+    cells[i]=poly;
+  }
+  AREAS.forEach(a=>{a._cells=[];a._area=0;a._cx=0;a._cy=0});
+  cells.forEach((poly,i)=>{
+    if(!poly||poly.length<3)return;
+    const a=AREAS[SITES[i].ai], ct=polyCentroid(poly);
+    a._cells.push(poly); a._area+=ct.a; a._cx+=ct.x*ct.a; a._cy+=ct.y*ct.a;
+  });
+  AREAS.forEach(a=>{ if(a._area>0){a._cx/=a._area;a._cy/=a._area} else {const p=px(a.pts[0][0],a.pts[0][1]);a._cx=p.x;a._cy=p.y} });
+
+  /* classify every edge: city outline / zone border / interior seam */
+  const nearestAi=(x,y)=>{ let b1=1e18,b2=1e18,a1=-1,a2=-1;
+    for(const s of SITES){const d=(s.x-x)**2+(s.y-y)**2;
+      if(d<b1){b2=b1;a2=a1;b1=d;a1=s.ai}else if(d<b2){b2=d;a2=s.ai}}
+    return [a1,a2]; };
+  AREAS.forEach(a=>{ a._outline=[]; });
+  const cityEdges=[];
+  cells.forEach((poly,i)=>{
+    if(!poly||poly.length<3)return;
+    const ai=SITES[i].ai;
+    for(let v=0;v<poly.length;v++){
+      const A=poly[v],B=poly[(v+1)%poly.length];
+      if(A.e==='b'){ cityEdges.push([A.x,A.y,B.x,B.y]); AREAS[ai]._outline.push([A.x,A.y,B.x,B.y]); continue; }
+      const mx=(A.x+B.x)/2,my=(A.y+B.y)/2, nn=nearestAi(mx,my);
+      if(nn[0]!==nn[1]) AREAS[ai]._outline.push([A.x,A.y,B.x,B.y]);
+    }
+  });
+  /* de-duplicate zone borders for drawing (each shared edge appears twice) */
+  const seen=new Set(), borders=[];
+  AREAS.forEach(a=>a._outline.forEach(e=>{
+    const k=[Math.round(e[0]*4),Math.round(e[1]*4),Math.round(e[2]*4),Math.round(e[3]*4)].sort().join(",");
+    if(seen.has(k))return; seen.add(k); borders.push(e);
+  }));
+  return {borders, cityEdges};
+}
+const ZONES = buildZones();
+
+/* =========================================================================
+   6. RENDER
+   ========================================================================= */
+const $=(s)=>document.querySelector(s);
+const svg=$("#map"), gWorld=$("#gWorld"), gCells=$("#gCells"), gFeat=$("#gFeat"),
+      gRoads=$("#gRoads"), gBound=$("#gBound"), gLabels=$("#gLabels"), gPins=$("#gPins");
+const NS="http://www.w3.org/2000/svg";
+const el=(t,attrs)=>{const e=document.createElementNS(NS,t);for(const k in attrs)e.setAttribute(k,attrs[k]);return e};
+const path=(pts,close)=>pts.map((p,i)=>(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)).join("")+(close?"Z":"");
+
+const state={view:"city", sel:null, k:1, tx:0, ty:0, fit:null, cats:new Set(Object.keys(CATS)), tab:"detail", panelOpen:false};
+
+function drawCity(){
+  gCells.innerHTML=""; gFeat.innerHTML=""; gRoads.innerHTML=""; gBound.innerHTML="";
+  document.getElementById("cityClipPath").setAttribute("d", path(BOUND,true));
+  gFeat.setAttribute("clip-path","url(#cityClip)"); gRoads.setAttribute("clip-path","url(#cityClip)");
+  AREAS.forEach(a=>{
+    a._cells.forEach(poly=>{
+      const p=el("path",{d:path(poly,true), fill:CHAR[a.char].fill, "fill-opacity":".82", class:"cell", "data-area":a.id, stroke:"none"});
+      p.addEventListener("click",e=>{e.stopPropagation();selectArea(a.id)});
+      p.addEventListener("pointerenter",e=>showTip(e,`<b>${a.name}</b> <i>${CHAR[a.char].label}</i>`));
+      p.addEventListener("pointermove",e=>moveTip(e));
+      p.addEventListener("pointerleave",hideTip);
+      gCells.appendChild(p);
+      if(a.char==="green"||a.id==="tlalpan")
+        gCells.appendChild(el("path",{d:path(poly,true), fill:"url(#trees)", stroke:"none", "pointer-events":"none"}));
+    });
+  });
+  /* features */
+  FEATURES.forEach(f=>{
+    const pts=f.pts.map(([la,lo])=>px(la,lo));
+    if(f.k==="park") gFeat.appendChild(el("path",{d:path(pts,true), fill:"rgba(72,150,84,.40)", stroke:"rgba(52,110,62,.45)","stroke-width":".8"}));
+    else if(f.k==="lake") gFeat.appendChild(el("path",{d:path(pts,true), fill:"#a8cfd8", stroke:"#8ab8c4","stroke-width":".6"}));
+    else gFeat.appendChild(el("path",{d:path(pts,false), stroke:"rgba(120,110,100,.55)","stroke-width":"1.6", fill:"none"}));
+  });
+  CANALS.forEach(c=>{
+    const pts=c.map(([la,lo])=>px(la,lo));
+    gFeat.appendChild(el("path",{d:path(pts,false), class:"canal"}));
+  });
+  /* roads */
+  ROADS.forEach(r=>{
+    const pts=r.pts.map(([la,lo])=>px(la,lo)), d=path(pts,false);
+    gRoads.appendChild(el("path",{d, class:"road-case","stroke-width":(r.w+1.4).toFixed(1)}));
+    gRoads.appendChild(el("path",{d, class:"road","stroke-width":r.w}));
+  });
+  /* zone borders + city outline */
+  const bd=ZONES.borders.map(e=>`M${e[0].toFixed(1)} ${e[1].toFixed(1)}L${e[2].toFixed(1)} ${e[3].toFixed(1)}`).join("");
+  gBound.appendChild(el("path",{d:bd, stroke:"#fffaf2","stroke-width":"1.5", fill:"none","stroke-linecap":"round",opacity:".95","pointer-events":"none"}));
+  const ce=ZONES.cityEdges.map(e=>`M${e[0].toFixed(1)} ${e[1].toFixed(1)}L${e[2].toFixed(1)} ${e[3].toFixed(1)}`).join("");
+  gBound.appendChild(el("path",{d:ce, stroke:"#b09a78","stroke-width":"1.6", fill:"none",opacity:".8","pointer-events":"none"}));
+  gBound.appendChild(el("path",{d:"", id:"selOutline", stroke:"#2f2a24","stroke-width":"2.6", fill:"none","stroke-linecap":"round","pointer-events":"none"}));
+}
+
+/* ---- region (day-trip) view ---- */
+const REGION={};
+function drawRegion(){
+  gCells.innerHTML=""; gFeat.innerHTML=""; gRoads.innerHTML=""; gBound.innerHTML="";
+  gFeat.removeAttribute("clip-path"); gRoads.removeAttribute("clip-path");
+  const cityPts=CITY_BOUND.map(([la,lo])=>px(la,lo));
+  const c=polyCentroid(cityPts); REGION.cx=c.x; REGION.cy=c.y;
+  /* soft terrain rings */
+  gFeat.appendChild(el("ellipse",{cx:c.x,cy:c.y,rx:520,ry:430,fill:"rgba(140,160,120,.10)"}));
+  gFeat.appendChild(el("ellipse",{cx:c.x,cy:c.y,rx:300,ry:250,fill:"rgba(140,160,120,.10)"}));
+  TRIPS.forEach(t=>{
+    const p=px(t.lat,t.lon);
+    const mx=(c.x+p.x)/2 + (p.y-c.y)*0.10, my=(c.y+p.y)/2 - (p.x-c.x)*0.10;
+    gRoads.appendChild(el("path",{d:`M${c.x.toFixed(1)} ${c.y.toFixed(1)}Q${mx.toFixed(1)} ${my.toFixed(1)} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`,
+      fill:"none", stroke:"rgba(150,120,80,.42)","stroke-width":"1.6","stroke-dasharray":"5 5"}));
+  });
+  const cityPath=el("path",{d:path(cityPts,true), fill:"#e0a06a","fill-opacity":".85", stroke:"#8c6a3f","stroke-width":"1.6", class:"cell"});
+  cityPath.addEventListener("click",()=>{state.view="city";applyView()});
+  gCells.appendChild(cityPath);
+}
+
+/* ---- pin shapes ---- */
+function pinPath(shape,r){
+  switch(shape){
+    case "star":{let d="";for(let i=0;i<10;i++){const rr=i%2?r*0.46:r*1.02,a=-Math.PI/2+i*Math.PI/5;
+      d+=(i?"L":"M")+(Math.cos(a)*rr).toFixed(2)+" "+(Math.sin(a)*rr).toFixed(2)}return d+"Z"}
+    case "triangle":return `M0 ${(-r*1.08).toFixed(2)}L${(r).toFixed(2)} ${(r*0.78).toFixed(2)}L${(-r).toFixed(2)} ${(r*0.78).toFixed(2)}Z`;
+    case "square":return `M${-r*.84} ${-r*.84}H${r*.84}V${r*.84}H${-r*.84}Z`;
+    case "diamond":return `M0 ${-r*1.1}L${r*1.02} 0L0 ${r*1.1}L${-r*1.02} 0Z`;
+    case "pent":{let d="";for(let i=0;i<5;i++){const a=-Math.PI/2+i*2*Math.PI/5;
+      d+=(i?"L":"M")+(Math.cos(a)*r).toFixed(2)+" "+(Math.sin(a)*r).toFixed(2)}return d+"Z"}
+    case "hex":{let d="";for(let i=0;i<6;i++){const a=i*Math.PI/3;
+      d+=(i?"L":"M")+(Math.cos(a)*r).toFixed(2)+" "+(Math.sin(a)*r).toFixed(2)}return d+"Z"}
+    default:return `M${-r} 0a${r} ${r} 0 1 0 ${2*r} 0a${r} ${r} 0 1 0 ${-2*r} 0Z`;
+  }
+}
+
+/* =========================================================================
+   7. VIEWPORT + OVERLAY (labels & pins live in screen space)
+   ========================================================================= */
+let W=0,H=0;
+function resize(){
+  const r=$("#mapwrap").getBoundingClientRect();
+  W=Math.max(320,r.width); H=Math.max(320,r.height);
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+}
+function visibleH(){
+  if(window.innerWidth<=860) return state.panelOpen ? Math.max(210,H*0.36) : H-116;
+  return H;
+}
+function worldBBox(){
+  let pts;
+  if(state.view==="city") pts=BOUND.map(p=>({x:p.x,y:p.y}));
+  else{ pts=CITY_BOUND.map(([la,lo])=>px(la,lo)).concat(TRIPS.map(t=>px(t.lat,t.lon))); }
+  const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y);
+  return {x0:Math.min(...xs),x1:Math.max(...xs),y0:Math.min(...ys),y1:Math.max(...ys)};
+}
+function fitView(anim){
+  const b=worldBBox(), pad=state.view==="city"?0.90:0.84;
+  const bw=b.x1-b.x0, bh=b.y1-b.y0;
+  const availH = visibleH();
+  const k=Math.min(W/bw, availH/bh)*pad;
+  state.fit=k; state.k=k;
+  state.tx=W/2-(b.x0+b.x1)/2*k;
+  state.ty=availH/2-(b.y0+b.y1)/2*k;
+  applyTransform();
+}
+function fitBox(la0,la1,lo0,lo1,pad){
+  const a=px(la1,lo0), b=px(la0,lo1);
+  const bw=Math.abs(b.x-a.x), bh=Math.abs(b.y-a.y);
+  const availH=visibleH();
+  state.k=Math.min(W/bw, availH/bh)*(pad||0.94);
+  state.tx=W/2-(a.x+b.x)/2*state.k; state.ty=availH/2-(a.y+b.y)/2*state.k;
+  applyTransform();
+}
+const CORE=[19.325,19.500,-99.245,-99.085];
+function fitCore(){ fitBox(CORE[0],CORE[1],CORE[2],CORE[3]); }
+function applyTransform(){
+  gWorld.setAttribute("transform",`translate(${state.tx.toFixed(2)} ${state.ty.toFixed(2)}) scale(${state.k.toFixed(4)})`);
+  gWorld.querySelectorAll("path,ellipse").forEach(n=>n.setAttribute("vector-effect","non-scaling-stroke"));
+  paintOverlay();
+}
+const S2=(x,y)=>[x*state.k+state.tx, y*state.k+state.ty];
+function zoomAt(cx,cy,f){
+  const nk=Math.max(state.fit*0.55,Math.min(state.fit*26,state.k*f));
+  const wx=(cx-state.tx)/state.k, wy=(cy-state.ty)/state.k;
+  state.k=nk; state.tx=cx-wx*nk; state.ty=cy-wy*nk; applyTransform();
+}
+function flyTo(wx,wy,k){
+  const target=k||Math.max(state.k,state.fit*4.2);
+  const availH=visibleH();
+  state.k=Math.min(state.fit*26,target);
+  state.tx=W/2-wx*state.k; state.ty=availH/2-wy*state.k; applyTransform();
+}
+
+function hitRect(r,list){
+  for(const q of list) if(!(r[2]<q[0]||r[0]>q[2]||r[3]<q[1]||r[1]>q[3])) return true;
+  return false;
+}
+const CATORDER=["star","sight","museum","shop","bar","eat","park"];
+
+function paintOverlay(){
+  gLabels.innerHTML=""; gPins.innerHTML="";
+  const taken=[];
+  if(state.view==="city"){
+    /* --- area labels --- */
+    const list=AREAS.slice().sort((a,b)=>(b.id===state.sel?1e9:b._area)-(a.id===state.sel?1e9:a._area));
+    list.forEach(a=>{
+      const [sx,sy]=S2(a._cx,a._cy);
+      if(sx<-40||sx>W+40||sy<-20||sy>H+20)return;
+      const isSel=state.sel===a.id;
+      const zoomed=state.k/state.fit;
+      const small=a._area<1400 && zoomed<1.35;
+      const name=a.name;
+      const fs=isSel?12.8:(a._area>5200?12:10.6);
+      const wpx=name.length*fs*0.52, hpx=fs+4;
+      const r=[sx-wpx/2-2,sy-hpx/2-1,sx+wpx/2+2,sy+hpx/2+1];
+      if(!isSel && (small || hitRect(r,taken))) return;
+      taken.push(r);
+      const t=el("text",{x:sx.toFixed(1),y:(sy+fs*0.34).toFixed(1),
+        class:"lbl"+(a._area>5200?" big":"")+(a.char==="green"?" park":"")+(isSel?" sel":"")});
+      t.setAttribute("font-size",fs.toFixed(1)); t.textContent=name;
+      gLabels.appendChild(t);
+    });
+    /* --- pins --- */
+    const pins=POIS.filter(p=>state.cats.has(p.c));
+    const aaKey=activeArea();
+    const rank=p=>(state.sel===p._key?4:0)+(aaKey&&p.a===aaKey?2:0)+(p.c==="star"?1:0);
+    pins.sort((a,b)=>{
+      const d=rank(b)-rank(a); if(d)return d;
+      return CATORDER.indexOf(a.c)-CATORDER.indexOf(b.c);
+    });
+    const pinTaken=[], showNames=state.k/state.fit>2.6;
+    pins.forEach(p=>{
+      const w=px(p.lat,p.lon), [sx,sy]=S2(w.x,w.y);
+      if(sx<-20||sx>W+20||sy<-20||sy>H+20)return;
+      const isSel=state.sel===p._key, inArea=aaKey&&p.a===aaKey;
+      const rr=isSel?8:6;
+      const box=[sx-rr-2,sy-rr-2,sx+rr+2,sy+rr+2];
+      if(!isSel && !inArea && hitRect(box,pinTaken))return;
+      pinTaken.push(box);
+      const g=el("g",{class:"pin"+(isSel?" sel":""), transform:`translate(${sx.toFixed(1)} ${sy.toFixed(1)})`});
+      const cat=CATS[p.c];
+      g.appendChild(el("path",{d:pinPath(cat.shape,rr), fill:cat.color, stroke:"#fff","stroke-width":isSel?2.2:1.5, filter:"url(#soft)"}));
+      if(p.c==="star"&&p.s===2) g.appendChild(el("circle",{cx:0,cy:0,r:2.1,fill:"#fff",opacity:".92"}));
+      g.style.cursor="pointer";
+      g.addEventListener("click",e=>{e.stopPropagation();selectPoi(p._key)});
+      g.addEventListener("pointerenter",e=>showTip(e,`<b>${p.n}</b>${p.c==="star"?' <i>'+(p.s===2?"★★":p.s===1?"★":"was ★")+'</i>':""}`));
+      g.addEventListener("pointermove",moveTip);
+      g.addEventListener("pointerleave",hideTip);
+      gPins.appendChild(g);
+      if(showNames||isSel||(inArea&&state.k/state.fit>1.8)){
+        const fs=isSel?11.5:10.2, wpx=p.n.length*fs*0.52;
+        const lr=[sx-wpx/2-2, sy+rr+3.5, sx+wpx/2+2, sy+rr+fs+5];
+        if(!hitRect(lr,taken)&&!hitRect(lr,pinTaken)){
+          taken.push(lr); pinTaken.push(lr);
+          const t=el("text",{x:sx.toFixed(1), y:(sy+rr+fs+2).toFixed(1), class:"lbl sm"});
+          t.setAttribute("font-size",fs.toFixed(1));
+          if(isSel)t.setAttribute("font-weight","800");
+          t.textContent=p.n; gLabels.appendChild(t);
+        }
+      }
+    });
+    /* selection outline */
+    const so=$("#selOutline");
+    if(so){
+      const a=AREAS.find(a=>a.id===activeArea());
+      so.setAttribute("d", a? a._outline.map(e=>`M${e[0].toFixed(1)} ${e[1].toFixed(1)}L${e[2].toFixed(1)} ${e[3].toFixed(1)}`).join("") : "");
+    }
+    gCells.querySelectorAll(".cell").forEach(c=>{
+      const aa=activeArea(); c.classList.toggle("dim", !!aa && c.dataset.area!==aa);
+    });
+  } else {
+    /* ---- region view ---- */
+    const cl=el("text",{x:0,y:0,class:"lbl big"});
+    const [ccx,ccy]=S2(REGION.cx,REGION.cy);
+    cl.setAttribute("x",ccx.toFixed(1)); cl.setAttribute("y",ccy.toFixed(1)); cl.textContent="CIUDAD DE MÉXICO";
+    gLabels.appendChild(cl);
+    TRIPS.forEach(t=>{
+      const w=px(t.lat,t.lon), [sx,sy]=S2(w.x,w.y);
+      const isSel=state.sel==="@"+t.n, rr=isSel?9:7;
+      const g=el("g",{class:"pin"+(isSel?" sel":""), transform:`translate(${sx.toFixed(1)} ${sy.toFixed(1)})`});
+      g.appendChild(el("path",{d:pinPath(CATS[t.c].shape,rr), fill:CATS[t.c].color, stroke:"#fff","stroke-width":1.8, filter:"url(#soft)"}));
+      g.style.cursor="pointer";
+      g.addEventListener("click",e=>{e.stopPropagation();selectTrip(t.n)});
+      g.addEventListener("pointerenter",e=>showTip(e,`<b>${t.n}</b> <i>${t.t}</i>`));
+      g.addEventListener("pointermove",moveTip);
+      g.addEventListener("pointerleave",hideTip);
+      gPins.appendChild(g);
+      const wpx=Math.max(t.n.length,t.t.length)*6.2;
+      const cands=[sy+rr+3, sy-rr-27, sy+rr+29, sy-rr-53];
+      let top=cands[0];
+      for(const cd of cands){ const bx=[sx-wpx/2,cd,sx+wpx/2,cd+24]; if(!hitRect(bx,taken)){top=cd;break} }
+      {
+        taken.push([sx-wpx/2,top,sx+wpx/2,top+24]);
+        const t1=el("text",{x:sx.toFixed(1),y:(top+10).toFixed(1),class:"lbl"+(isSel?" sel":"")});
+        t1.textContent=t.n; gLabels.appendChild(t1);
+        const t2=el("text",{x:sx.toFixed(1),y:(top+21).toFixed(1),class:"lbl sm"});
+        t2.textContent=t.t; gLabels.appendChild(t2);
+      }
+    });
+  }
+}
+
+/* ---- tooltip ---- */
+const tipEl=$("#tip");
+function showTip(e,html){ tipEl.innerHTML=html; tipEl.classList.add("on"); moveTip(e); }
+function moveTip(e){ const r=$("#mapwrap").getBoundingClientRect();
+  tipEl.style.left=(e.clientX-r.left)+"px"; tipEl.style.top=(e.clientY-r.top-6)+"px"; }
+function hideTip(){ tipEl.classList.remove("on"); }
+
+/* =========================================================================
+   8. SELECTION + PANEL
+   ========================================================================= */
+POIS.forEach((p,i)=>{p._key="#"+i});
+const areaById=id=>AREAS.find(a=>a.id===id);
+const poiByKey=k=>POIS[+k.slice(1)];
+const tripByName=n=>TRIPS.find(t=>t.n===n);
+function activeArea(){
+  if(!state.sel)return null;
+  if(state.sel.charAt(0)==="#")return poiByKey(state.sel).a;
+  if(state.sel.charAt(0)==="@")return null;
+  return state.sel;
+}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const starStr=s=>s===2?"★★":s===1?"★":"★ (2024–25)";
+
+function selectArea(id,noFly){
+  state.sel=id; state.tab="detail"; syncTabs(); openSheet();
+  const a=areaById(id);
+  if(!noFly&&a){ const z=a._area>9000?2.4:a._area>3500?3.4:a._area>1400?4.4:5.4;
+    flyTo(a._cx,a._cy, Math.max(state.k, state.fit*z)); }
+  else paintOverlay();
+  renderPanel();
+}
+function selectPoi(key,noFly){
+  state.sel=key; state.tab="detail"; syncTabs(); openSheet();
+  const p=poiByKey(key), w=px(p.lat,p.lon);
+  if(!noFly) flyTo(w.x,w.y, Math.max(state.k, state.fit*6));
+  else paintOverlay();
+  renderPanel();
+}
+function selectTrip(n){
+  state.sel="@"+n; state.tab="detail"; syncTabs();
+  paintOverlay(); renderPanel(); openSheet();
+}
+function clearSel(){ state.sel=null; paintOverlay(); renderPanel(); }
+
+function poisIn(id){ return POIS.filter(p=>p.a===id); }
+function catIcon(c){ const t=CATS[c];
+  return `<span class="ic" style="background:${t.color}"><svg width="14" height="14" viewBox="-8 -8 16 16"><path d="${pinPath(t.shape,5.4)}" fill="#fff"/></svg></span>`; }
+
+function poiItem(p){
+  return `<div class="item" data-poi="${p._key}">${catIcon(p.c)}<div>
+    <div class="t">${esc(p.n)} ${p.c==="star"?`<span class="stars">${starStr(p.s)}</span>`:""}</div>
+    <div class="d">${esc(p.d)}</div>${p.m?`<div class="m">${esc(p.m)}</div>`:""}</div></div>`;
+}
+function areaItem(a){
+  const n=poisIn(a.id).length;
+  return `<div class="item" data-area="${a.id}"><span class="ic" style="background:${CHAR[a.char].fill};color:#3b3228">${a.name.charAt(0)}</span><div>
+    <div class="t">${esc(a.name)}</div><div class="d">${esc(a.best)}</div>
+    <div class="m">${esc(a.es)} · ${n} place${n===1?"":"s"} pinned</div></div></div>`;
+}
+
+function renderPanel(){
+  const b=$("#pbody");
+  if(state.tab==="areas")      b.innerHTML=viewAreas();
+  else if(state.tab==="list")  b.innerHTML=viewHighlights();
+  else if(state.tab==="tips")  b.innerHTML=viewTips();
+  else                         b.innerHTML=viewDetail();
+  b.scrollTop=0;
+  b.querySelectorAll("[data-poi]").forEach(n=>n.addEventListener("click",()=>selectPoi(n.dataset.poi)));
+  b.querySelectorAll("[data-area]").forEach(n=>n.addEventListener("click",()=>selectArea(n.dataset.area)));
+  b.querySelectorAll("[data-trip]").forEach(n=>n.addEventListener("click",()=>selectTrip(n.dataset.trip)));
+  b.querySelectorAll("[data-tab]").forEach(n=>n.addEventListener("click",()=>{state.tab=n.dataset.tab;syncTabs();renderPanel()}));
+}
+
+function viewDetail(){
+  if(!state.sel) return state.view==="region"?regionWelcome():welcome();
+  if(state.sel.charAt(0)==="@"){
+    const t=tripByName(state.sel.slice(1));
+    return `<div class="hero"><div class="kicker">Day trip · ${esc(t.t)}</div><h2>${esc(t.n)}</h2></div>
+      <div class="pad"><div class="desc"><p>${esc(t.d)}</p></div>
+      <div class="note"><b>Practical:</b> ${esc(t.m)}</div>
+      <div class="sec"><h3>Getting there</h3><div class="desc"><p>Most day trips run from the Terminal del Norte (north), Taxqueña (south) or Observatorio (west) bus stations — ADO and similar lines are comfortable and cheap. For Teotihuacán, Tepoztlán and Puebla, buses go at least hourly; for anything with a hike or a crater, a driver or tour is easier.</p></div></div>
+      <div class="foot">Distances and times are typical door-to-door estimates without heavy traffic.</div></div>`;
+  }
+  if(state.sel.charAt(0)==="#"){
+    const p=poiByKey(state.sel), a=areaById(p.a), sib=poisIn(p.a).filter(q=>q!==p).slice(0,8);
+    return `<div class="hero">
+      <button class="backlink" data-area="${a.id}">&larr; ${esc(a.name)}</button>
+      <div class="kicker">${esc(CATS[p.c].n)}</div>
+      <h2>${esc(p.n)}</h2>
+      ${p.c==="star"?`<div class="stars" style="font-size:14px">${starStr(p.s)} MICHELIN</div>`:""}
+      <div class="tags"><span class="tag k">${esc(a.name)}</span><span class="tag">${esc(a.es)}</span></div>
+      </div>
+      <div class="pad">
+        <div class="desc"><p>${esc(p.d)}</p></div>
+        ${p.m?`<div class="note"><b>Good to know:</b> ${esc(p.m)}</div>`:""}
+        <div class="sec"><h3>Also in ${esc(a.name)}</h3>${sib.map(poiItem).join("")||'<div class="empty">Nothing else pinned here yet.</div>'}</div>
+      </div>`;
+  }
+  const a=areaById(state.sel); if(!a) return welcome();
+  const ps=poisIn(a.id), groups=CATORDER.filter(c=>ps.some(p=>p.c===c));
+  return `<div class="hero">
+      <div class="kicker">${esc(a.es)} · ${esc(CHAR[a.char].label)}</div>
+      <h2>${esc(a.name)}</h2>
+      <div class="tags"><span class="tag k">${ps.length} place${ps.length===1?"":"s"} pinned</span>
+        ${ps.some(p=>p.c==="star")?'<span class="tag">Michelin here</span>':""}</div>
+    </div>
+    <div class="pad">
+      <div class="desc"><p>${esc(a.blurb)}</p></div>
+      <dl class="facts">
+        <dt>Best for</dt><dd>${esc(a.best)}</dd>
+        <dt>Feel</dt><dd>${esc(a.feel)}</dd>
+        <dt>Metro</dt><dd>${esc(a.metro)}</dd>
+      </dl>
+      <div class="note" style="margin-top:12px"><b>Tip:</b> ${esc(a.tip)}</div>
+      ${groups.map(c=>`<div class="sec"><h3>${esc(CATS[c].n)}</h3>${ps.filter(p=>p.c===c).map(poiItem).join("")}</div>`).join("")
+        || '<div class="sec"><h3>Places</h3><div class="empty">No pins in this zone — it is here for orientation.</div></div>'}
+      <div class="foot">Zones are simplified for clarity: real colonia boundaries interlock in ways no clickable map can show.</div>
+    </div>`;
+}
+
+function welcome(){
+  const picks=["Museo Nacional de Antropología","Trajineras de Xochimilco","Museo Frida Kahlo (Casa Azul)","Palacio de Bellas Artes","Pujol","Contramar"].map(n=>POIS.find(p=>p.n===n)).filter(Boolean);
+  return `<div class="hero"><div class="kicker">Start here</div><h2>Pick an area</h2>
+    <div class="sub">Tap any zone on the map for a short description, the vibe, the nearest metro and what is worth your time there. Pins are colour-coded by category — use the chips on the map to filter.</div></div>
+    <div class="pad">
+      <div class="sec"><h3>If it is your first trip</h3>
+        ${["centro","romanorte","condesa","coyoacan","polanco","chapultepec"].map(id=>areaItem(areaById(id))).join("")}
+      </div>
+      <div class="sec"><h3>Six things people fly in for</h3>${picks.map(poiItem).join("")}</div>
+      <div class="foot">Written as a travel primer, not a live listing service — opening hours, prices and reservations change, so check before you go.</div>
+    </div>`;
+}
+
+function tripItem(t){
+  return `<div class="item" data-trip="${esc(t.n)}">${catIcon(t.c)}<div>
+    <div class="t">${esc(t.n)}</div><div class="d">${esc(t.d)}</div>
+    <div class="m">${esc(t.t)}</div></div></div>`;
+}
+function regionWelcome(){
+  const first=["Teotihuacán","Tepoztlán","Puebla & Cholula"];
+  return `<div class="hero"><div class="kicker">Beyond the city</div><h2>Pick a day trip</h2>
+    <div class="sub">Everything here is reachable from Mexico City — the nearest is 45 minutes away, the furthest is really an overnight. Tap a pin, or an entry below.</div></div>
+    <div class="pad">
+      <div class="sec"><h3>Classic first choices</h3>${first.map(nm=>tripItem(tripByName(nm))).join("")}</div>
+      <div class="sec"><h3>Everything else</h3>${TRIPS.filter(t=>!first.includes(t.n)).map(tripItem).join("")}</div>
+      <div class="foot">Times are typical door-to-door estimates without heavy traffic.</div>
+    </div>`;
+}
+function viewAreas(){
+  const order=["historic","trendy","upscale","culture","local","green","outer"];
+  return `<div class="pad">${order.map(k=>{
+    const list=AREAS.filter(a=>a.char===k); if(!list.length)return"";
+    return `<div class="grp"><h4><i style="background:${CHAR[k].fill}"></i>${CHAR[k].label}</h4>
+      <div class="arealist">${list.map(areaItem).join("")}</div></div>`;
+  }).join("")}<div class="foot">${AREAS.length} zones covering the city and its inner suburbs.</div></div>`;
+}
+
+function viewHighlights(){
+  return `<div class="pad">${CATORDER.map(c=>{
+    const list=POIS.filter(p=>p.c===c);
+    return `<div class="sec"><h3>${esc(CATS[c].n)} · ${list.length}</h3>${list.map(p=>{
+      const a=areaById(p.a);
+      return `<div class="item" data-poi="${p._key}">${catIcon(p.c)}<div>
+        <div class="t">${esc(p.n)} ${p.c==="star"?`<span class="stars">${starStr(p.s)}</span>`:""}</div>
+        <div class="d">${esc(p.d)}</div>
+        <div class="m">${a?esc(a.name):""}${p.m?" · "+esc(p.m):""}</div></div></div>`;
+    }).join("")}</div>`;
+  }).join("")}<div class="foot">Michelin listings follow the 2026 MICHELIN Guide México selection.</div></div>`;
+}
+
+function viewTips(){
+  return `<div class="pad">
+    <div class="sec"><h3>The basics</h3><div class="desc">
+      <p><b>Altitude.</b> The city sits at 2,240 m (7,350 ft). Take the first day slowly, drink water, and go easy on alcohol until you have adjusted — mezcal at altitude is a different animal.</p>
+      <p><b>Getting around.</b> The Metro is fast, cheap and crowded; buy a rechargeable card at any station. The Metrobús runs the length of Insurgentes. Uber and Didi are cheap and universally used — do not flag taxis on the street.</p>
+      <p><b>Money.</b> Cards work almost everywhere except markets, taquerías and trajineras. Carry small pesos. Tip 10–15% in restaurants; a few coins for the person watching parked cars.</p>
+      <p><b>Water.</b> Drink bottled or filtered water; everyone here does, including locals. Ice in established restaurants and bars is made from purified water and is fine.</p>
+    </div></div>
+    <div class="sec"><h3>Timing</h3><div class="desc">
+      <p><b>Museums close on Mondays</b> — almost all of them, including the Anthropology Museum, Bellas Artes, the castle and Casa Azul. Plan Monday for markets, parks and neighbourhoods.</p>
+      <p><b>Meal times run late.</b> Lunch (<i>la comida</i>) is 2–4pm and is the big meal; dinner starts at 9pm. Restaurants at 7pm feel empty because they are.</p>
+      <p><b>Rain</b> falls almost daily from June to September, usually as a hard late-afternoon burst that clears. March–May is warm and dry; the jacarandas turn the city purple in late March.</p>
+      <p><b>Sunday mornings</b> Reforma closes to cars for cyclists and walkers until about 2pm — the single best time to see the city's main avenue.</p>
+    </div></div>
+    <div class="sec"><h3>Staying safe and comfortable</h3><div class="desc">
+      <p>Roma, Condesa, Juárez, Polanco, Coyoacán and San Ángel are the usual visitor bases and are comfortable to walk day and night. The Centro is excellent by day and thins out after dinner. Ordinary city sense applies: keep your phone away on the metro, use ride-shares at night, and avoid displaying valuables in markets.</p>
+      <p><b>Earthquake alerts</b> sound from public loudspeakers; there is also an annual drill each 19 September. If it sounds, follow staff instructions — buildings here are designed for it.</p>
+      <p><b>Reservations.</b> The starred restaurants and the top cocktail bars book out weeks ahead, and Casa Azul sells out days ahead. Book those before you fly; everything else can be improvised.</p>
+    </div></div>
+    <div class="sec"><h3>Neighbourhoods by trip type</h3><div class="desc">
+      <p><b>First visit, want to walk everywhere:</b> Roma Norte or Condesa.<br>
+      <b>Want history at the doorstep:</b> Centro Histórico or Alameda.<br>
+      <b>Want quiet and luxury:</b> Polanco or Lomas.<br>
+      <b>Travelling with family:</b> Coyoacán or Del Valle.<br>
+      <b>On a budget:</b> Escandón, Narvarte or Santa María la Ribera.</p>
+    </div></div>
+    <div class="foot">Reference guide compiled for a first trip — verify hours, prices and bookings directly with each place before you go.</div>
+  </div>`;
+}
+
+/* =========================================================================
+   9. CHROME — filters, legend, search, tabs
+   ========================================================================= */
+function buildFilters(){
+  const f=$("#filters"); f.innerHTML="";
+  CATORDER.forEach(c=>{
+    const t=CATS[c], n=POIS.filter(p=>p.c===c).length;
+    const b=document.createElement("button");
+    b.className="chip"+(state.cats.has(c)?"":" off");
+    b.innerHTML=`<span class="sw" style="background:${t.color}"><svg width="10" height="10" viewBox="-8 -8 16 16"><path d="${pinPath(t.shape,6)}" fill="#fff"/></svg></span>${t.label} <span style="opacity:.55">${n}</span>`;
+    b.addEventListener("click",()=>{
+      if(state.cats.has(c))state.cats.delete(c); else state.cats.add(c);
+      b.classList.toggle("off",!state.cats.has(c)); paintOverlay();
+    });
+    f.appendChild(b);
+  });
+}
+function buildLegend(){
+  $("#legRows").innerHTML=Object.keys(CHAR).map(k=>
+    `<div class="r"><i style="background:${CHAR[k].fill}"></i>${CHAR[k].label}</div>`).join("");
+  $("#legToggle").addEventListener("click",()=>{
+    const l=$("#legend"); l.classList.toggle("collapsed");
+    $("#legToggle").textContent=l.classList.contains("collapsed")?"show":"hide";
+  });
+}
+function syncTabs(){ document.querySelectorAll("#ptabs button").forEach(b=>b.classList.toggle("on",b.dataset.tab===state.tab)); }
+
+/* ---- search ---- */
+const INDEX=[];
+function buildIndex(){
+  AREAS.forEach(a=>INDEX.push({t:a.name,s:`${a.es} · ${CHAR[a.char].label}`,k:"area",id:a.id,col:CHAR[a.char].fill,ch:a.name.charAt(0)}));
+  POIS.forEach(p=>{const a=areaById(p.a);
+    INDEX.push({t:p.n,s:`${CATS[p.c].label}${a?" · "+a.name:""}`,k:"poi",id:p._key,col:CATS[p.c].color,shape:CATS[p.c].shape})});
+  TRIPS.forEach(t=>INDEX.push({t:t.n,s:`Day trip · ${t.t}`,k:"trip",id:t.n,col:CATS[t.c].color,shape:CATS[t.c].shape}));
+}
+function runSearch(q){
+  const box=$("#results"); const s=q.trim().toLowerCase();
+  $("#searchWrap").classList.toggle("has",!!s);
+  if(!s){box.classList.remove("on");box.innerHTML="";return}
+  const norm=x=>x.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+  const hits=INDEX.map(it=>{const n=norm(it.t);const i=n.indexOf(norm(s));
+      return i<0?null:{it,r:(i===0?0:1)+(it.k==="area"?0:0.5)}}).filter(Boolean)
+    .sort((a,b)=>a.r-b.r).slice(0,14).map(h=>h.it);
+  box.innerHTML=hits.length?hits.map(h=>`<div class="res" data-k="${h.k}" data-id="${esc(h.id)}">
+      <span class="ic" style="background:${h.col}">${h.shape?`<svg width="12" height="12" viewBox="-8 -8 16 16"><path d="${pinPath(h.shape,5.6)}" fill="#fff"/></svg>`:esc(h.ch||"")}</span>
+      <div><div class="t">${esc(h.t)}</div><div class="s">${esc(h.s)}</div></div></div>`).join("")
+    :`<div class="none">Nothing matches “${esc(q)}”.</div>`;
+  box.classList.add("on");
+  box.querySelectorAll(".res").forEach(n=>n.addEventListener("click",()=>{
+    const k=n.dataset.k,id=n.dataset.id;
+    if(k==="trip"){ if(state.view!=="region"){state.view="region";applyView(true)} selectTrip(id); }
+    else { if(state.view!=="city"){state.view="city";applyView(true)} k==="area"?selectArea(id):selectPoi(id); }
+    $("#q").value=""; runSearch("");
+  }));
+}
+
+/* =========================================================================
+   10. INPUT
+   ========================================================================= */
+let drag=null, moved=false;
+svg.addEventListener("pointerdown",e=>{
+  if(e.button&&e.button!==0)return;
+  drag={x:e.clientX,y:e.clientY,tx:state.tx,ty:state.ty,id:e.pointerId}; moved=false;
+  svg.classList.add("drag"); svg.setPointerCapture(e.pointerId);
+});
+svg.addEventListener("pointermove",e=>{
+  if(!drag||drag.id!==e.pointerId)return;
+  const dx=e.clientX-drag.x, dy=e.clientY-drag.y;
+  if(Math.abs(dx)+Math.abs(dy)>4)moved=true;
+  state.tx=drag.tx+dx; state.ty=drag.ty+dy; applyTransform();
+});
+function endDrag(e){ if(!drag)return; svg.classList.remove("drag");
+  try{svg.releasePointerCapture(drag.id)}catch(_){}
+  drag=null; }
+svg.addEventListener("pointerup",e=>{ const wasMoved=moved; endDrag(e);
+  if(!wasMoved && e.target===svg) clearSel(); });
+svg.addEventListener("pointercancel",endDrag);
+svg.addEventListener("wheel",e=>{
+  e.preventDefault(); const r=svg.getBoundingClientRect();
+  zoomAt(e.clientX-r.left, e.clientY-r.top, Math.pow(0.9985,e.deltaY*(e.deltaMode===1?18:1)));
+},{passive:false});
+/* pinch */
+const ptrs=new Map(); let pinch=null;
+svg.addEventListener("pointerdown",e=>{ptrs.set(e.pointerId,e)});
+svg.addEventListener("pointermove",e=>{
+  if(!ptrs.has(e.pointerId))return; ptrs.set(e.pointerId,e);
+  if(ptrs.size===2){
+    const [a,b]=[...ptrs.values()], d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
+    const r=svg.getBoundingClientRect(), cx=(a.clientX+b.clientX)/2-r.left, cy=(a.clientY+b.clientY)/2-r.top;
+    if(pinch){ drag=null; zoomAt(cx,cy,d/pinch.d) }
+    pinch={d,cx,cy};
+  }
+});
+["pointerup","pointercancel","pointerleave"].forEach(t=>svg.addEventListener(t,e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null}));
+
+$("#zin").addEventListener("click",()=>zoomAt(W/2,H/2,1.45));
+$("#zout").addEventListener("click",()=>zoomAt(W/2,H/2,1/1.45));
+let fitMode=0;
+$("#zreset").addEventListener("click",()=>{clearSel(); if(state.view!=="city"){fitView();return} fitMode=1-fitMode; fitMode?fitView():fitCore(); $("#zreset").textContent=fitMode?"Core":"All"; });
+$("#q").addEventListener("input",e=>runSearch(e.target.value));
+$("#q").addEventListener("keydown",e=>{ if(e.key==="Escape"){e.target.value="";runSearch("")}
+  if(e.key==="Enter"){const f=$("#results .res"); if(f)f.click()} });
+$("#qclr").addEventListener("click",()=>{$("#q").value="";runSearch("");$("#q").focus()});
+document.addEventListener("click",e=>{ if(!e.target.closest("#searchWrap"))$("#results").classList.remove("on") });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){clearSel();$("#results").classList.remove("on")} });
+document.querySelectorAll("#ptabs button").forEach(b=>b.addEventListener("click",()=>{
+  state.tab=b.dataset.tab; syncTabs(); renderPanel(); openSheet();
+}));
+$("#btnTips").addEventListener("click",()=>{state.tab="tips";syncTabs();renderPanel();openSheet()});
+document.querySelectorAll("#viewtabs button").forEach(b=>b.addEventListener("click",()=>{
+  if(state.view===b.dataset.view)return;
+  state.view=b.dataset.view; applyView();
+}));
+$("#grip").addEventListener("click",()=>{
+  state.panelOpen=!state.panelOpen; $("#panel").classList.toggle("open",state.panelOpen);
+  paintOverlay();
+});
+function openSheet(){ if(window.innerWidth<=860){ state.panelOpen=true; $("#panel").classList.add("open"); } }
+
+function applyView(keepSel){
+  document.querySelectorAll("#viewtabs button").forEach(b=>b.classList.toggle("on",b.dataset.view===state.view));
+  $("#filters").style.display = state.view==="city"?"flex":"none";
+  $("#legend").style.display  = state.view==="city"?"block":"none";
+  if(!keepSel) state.sel=null;
+  if(state.view==="city") drawCity(); else drawRegion();
+  state.tab="detail"; syncTabs();
+  fitView(); if(state.view==="city") fitCore(); renderPanel();
+}
+
+let rt=null;
+window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{
+  const wx=(W/2-state.tx)/state.k, wy=(H/2-state.ty)/state.k, rel=state.k/state.fit;
+  resize();
+  const b=worldBBox(), availH=visibleH();
+  state.fit=Math.min(W/(b.x1-b.x0), availH/(b.y1-b.y0))*(state.view==="city"?0.90:0.84);
+  state.k=state.fit*rel; state.tx=W/2-wx*state.k; state.ty=H/2-wy*state.k; applyTransform();
+},120)});
+
+/* ---- boot ---- */
+resize(); buildFilters(); buildLegend(); buildIndex();
+drawCity(); fitView(); fitCore(); syncTabs(); renderPanel();
+</script>
+</body>
+</html>
