@@ -128,6 +128,28 @@
   .mine-mark{display:inline-block;font-size:10px;font-weight:700;color:#fff;background:#4338ca;
     border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:1px;letter-spacing:.03em}
   .synced{font-size:10.5px;color:var(--muted);margin-top:8px}
+  .days{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .days button{border:1px solid var(--line2);background:#fff;color:var(--ink2);border-radius:999px;
+    padding:5px 11px;font-size:12px;font-weight:650;cursor:pointer}
+  .days button.on{background:#b45309;border-color:#b45309;color:#fff}
+  .ev{display:flex;gap:10px;padding:9px;border:1px solid var(--line);background:#fff;border-radius:11px;
+    margin-bottom:7px;cursor:pointer;box-shadow:0 1px 3px rgba(90,66,38,.05)}
+  .ev:hover{border-color:#b45309}
+  .ev .num{width:24px;height:24px;border-radius:50%;background:#b45309;color:#fff;font-size:11.5px;font-weight:700;
+    display:grid;place-items:center;flex:none;margin-top:1px}
+  .ev.nogeo .num{background:#c9c1b4}
+  .ev .tm{font-size:11.5px;color:#b45309;font-weight:700;font-variant-numeric:tabular-nums}
+  .ev .t{font-size:13px;font-weight:650;line-height:1.3}
+  .ev .m{font-size:11px;color:var(--muted);margin-top:2px}
+  .drop{border:1.5px dashed var(--line2);border-radius:12px;padding:14px;text-align:center;color:var(--muted);font-size:12.5px}
+  .drop.hot{border-color:var(--accent2);background:rgba(13,127,122,.06);color:var(--ink2)}
+  .linkout{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:650;color:var(--accent2);
+    text-decoration:none;border:1px solid var(--line2);border-radius:9px;padding:7px 11px;background:#fff}
+  .linkout:hover{border-color:var(--accent2)}
+  .cal-out{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+  .cal-out input[type=date],.cal-out input[type=time],.cal-out select{border:1px solid var(--line2);border-radius:8px;
+    padding:6px 8px;font:inherit;font-size:12.5px;background:#fffdf9;color:var(--ink)}
+  textarea.paste{width:100%;min-height:90px;border:1px solid var(--line2);border-radius:9px;padding:9px;font:inherit;font-size:12px}
   .tip{position:absolute;z-index:20;background:rgba(30,25,20,.93);color:#fff;font-size:11.5px;padding:5px 9px;
     border-radius:7px;pointer-events:none;transform:translate(-50%,-140%);white-space:nowrap;opacity:0;transition:opacity .1s;
     box-shadow:0 4px 12px rgba(0,0,0,.25);max-width:240px}
@@ -264,6 +286,7 @@
           <g id="gBound"></g>
         </g>
         <g id="gPins"></g>
+        <g id="gCal"></g>
         <g id="gLabels"></g>
       </svg>
 
@@ -945,12 +968,13 @@ const ZONES = buildZones();
    ========================================================================= */
 const $=(s)=>document.querySelector(s);
 const svg=$("#map"), gWorld=$("#gWorld"), gCells=$("#gCells"), gFeat=$("#gFeat"),
-      gRoads=$("#gRoads"), gBound=$("#gBound"), gLabels=$("#gLabels"), gPins=$("#gPins");
+      gRoads=$("#gRoads"), gBound=$("#gBound"), gLabels=$("#gLabels"), gPins=$("#gPins"), gCal=$("#gCal");
 const NS="http://www.w3.org/2000/svg";
 const el=(t,attrs)=>{const e=document.createElementNS(NS,t);for(const k in attrs)e.setAttribute(k,attrs[k]);return e};
 const path=(pts,close)=>pts.map((p,i)=>(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)).join("")+(close?"Z":"");
 
-const state={view:"city", sel:null, k:1, tx:0, ty:0, fit:null, cats:new Set(Object.keys(CATS)), tab:"detail", panelOpen:false};
+const state={view:"city", sel:null, k:1, tx:0, ty:0, fit:null, cats:new Set(Object.keys(CATS)),
+  tab:"detail", panelOpen:false, day:null, showCal:true};
 
 function drawCity(){
   gCells.innerHTML=""; gFeat.innerHTML=""; gRoads.innerHTML=""; gBound.innerHTML="";
@@ -1074,6 +1098,16 @@ function fitBox(la0,la1,lo0,lo1,pad){
 }
 const CORE=[19.325,19.500,-99.245,-99.085];
 function fitCore(){ fitBox(CORE[0],CORE[1],CORE[2],CORE[3]); }
+/* frame the day's stops (plus home base) so an imported schedule is visible at once */
+function fitEvents(){
+  const pts=dayEvents().filter(e=>isFinite(e.lat)&&isFinite(e.lon)).map(e=>({lat:e.lat,lon:e.lon}));
+  const h=homeBase(); if(h)pts.push({lat:h.lat,lon:h.lon});
+  if(!pts.length){ fitCore(); return }
+  const las=pts.map(p=>p.lat), los=pts.map(p=>p.lon);
+  const pad=0.008;
+  fitBox(Math.min(...las)-pad, Math.max(...las)+pad, Math.min(...los)-pad, Math.max(...los)+pad, 0.86);
+  if(state.k>state.fit*14) state.k=state.fit*14, applyTransform();
+}
 function applyTransform(){
   gWorld.setAttribute("transform",`translate(${state.tx.toFixed(2)} ${state.ty.toFixed(2)}) scale(${state.k.toFixed(4)})`);
   gWorld.querySelectorAll("path,ellipse").forEach(n=>n.setAttribute("vector-effect","non-scaling-stroke"));
@@ -1168,6 +1202,36 @@ function paintOverlay(){
         }
       }
     });
+    /* --- the day's schedule --- */
+    gCal.innerHTML="";
+    if(state.showCal && state.day){
+      const evs=dayEvents().filter(e=>isFinite(e.lat)&&isFinite(e.lon));
+      const pts=evs.map(e=>{const w=px(e.lat,e.lon);return S2(w.x,w.y)});
+      if(pts.length>1)
+        gCal.appendChild(el("path",{d:pts.map((q,i)=>(i?"L":"M")+q[0].toFixed(1)+" "+q[1].toFixed(1)).join(""),
+          fill:"none",stroke:"#b45309","stroke-width":"2.2","stroke-dasharray":"7 5",opacity:".7",
+          "stroke-linecap":"round","stroke-linejoin":"round","pointer-events":"none"}));
+      evs.forEach((e,i)=>{
+        const [sx,sy]=pts[i], key="!"+EVENTS.indexOf(e), isSel=state.sel===key, r=isSel?12:10;
+        const g=el("g",{class:"pin"+(isSel?" sel":""),transform:`translate(${sx.toFixed(1)} ${sy.toFixed(1)})`});
+        g.appendChild(el("circle",{r:r, fill:"#b45309", stroke:isSel?"#2f2a24":"#fff","stroke-width":isSel?2.6:2, filter:"url(#soft)"}));
+        const t=el("text",{x:0,y:0,"text-anchor":"middle","dominant-baseline":"central",
+          fill:"#fff","font-size":(r*1.05).toFixed(1),"font-weight":"700","pointer-events":"none"});
+        t.textContent=String(i+1); g.appendChild(t);
+        g.style.cursor="pointer";
+        g.addEventListener("click",ev=>{ev.stopPropagation();selectEvent(EVENTS.indexOf(e))});
+        g.addEventListener("pointerenter",ev=>showTip(ev,`<b>${esc(e.t||"Event")}</b> <i>${timeLabel(e)}</i>`));
+        g.addEventListener("pointermove",moveTip);
+        g.addEventListener("pointerleave",hideTip);
+        gCal.appendChild(g);
+        const lb=el("text",{x:sx.toFixed(1),y:(sy+r+13).toFixed(1),class:"lbl"});
+        lb.setAttribute("font-size","11");
+        const nm=(e.t||"Event");
+        lb.textContent=timeLabel(e)+" · "+(nm.length>26?nm.slice(0,25).trim()+"…":nm);
+        gLabels.appendChild(lb);
+        taken.push([sx-50,sy+r+2,sx+50,sy+r+16]);
+      });
+    }
     /* selection outline */
     const so=$("#selOutline");
     if(so){
@@ -1261,9 +1325,73 @@ function selectTrip(n){
   state.sel="@"+n; state.tab="detail"; syncTabs();
   paintOverlay(); renderPanel(); openSheet();
 }
+function isEvtKey(k){return !!k&&k[0]==="!"}
+function selectEvent(i){
+  const e=EVENTS[i]; if(!e)return;
+  state.sel="!"+i; state.tab="detail"; syncTabs(); openSheet();
+  if(isFinite(e.lat)&&isFinite(e.lon)){ const w=px(e.lat,e.lon); flyTo(w.x,w.y,Math.max(state.k,state.fit*5)); }
+  else paintOverlay();
+  renderPanel();
+}
 function clearSel(){ state.sel=null; paintOverlay(); renderPanel(); }
 
 function poisIn(id){ return POIS.filter(p=>p.a===id); }
+const mapsURL=(lat,lon,label)=>"https://maps.apple.com/?ll="+lat+","+lon+"&q="+encodeURIComponent(label||"Stop")+"&t=m";
+function icsEscape(t){ return String(t).replace(/([\;,])/g,"\\$1").replace(/\n/g,"\\n") }
+function icsFold(line){
+  if(line.length<=73)return line;
+  const out=[]; let i=0;
+  while(i<line.length){ const take=i?72:73; out.push((i?" ":"")+line.slice(i,i+take)); i+=take }
+  return out.join("\r\n");
+}
+function buildICS(ev){
+  const p=x=>String(x).padStart(2,"0");
+  const loc=d=>d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+"T"+p(d.getHours())+p(d.getMinutes())+"00";
+  const utc=d=>d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+"T"+p(d.getUTCHours())+p(d.getUTCMinutes())+p(d.getUTCSeconds())+"Z";
+  const st=new Date(ev.startMs), en=new Date(ev.startMs+ev.mins*60000);
+  const uid="cdmx-"+Math.random().toString(36).slice(2)+"@area-guide";
+  const L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Mexico City Area Guide//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH",
+    "BEGIN:VTIMEZONE","TZID:America/Mexico_City","BEGIN:STANDARD","DTSTART:19700101T000000",
+    "TZOFFSETFROM:-0600","TZOFFSETTO:-0600","TZNAME:CST","END:STANDARD","END:VTIMEZONE",
+    "BEGIN:VEVENT","UID:"+uid,"DTSTAMP:"+utc(new Date()),
+    "DTSTART;TZID=America/Mexico_City:"+loc(st),"DTEND;TZID=America/Mexico_City:"+loc(en),
+    "SUMMARY:"+icsEscape(ev.title)];
+  if(ev.loc) L.push("LOCATION:"+icsEscape(ev.loc));
+  if(isFinite(ev.lat)){
+    L.push("GEO:"+ev.lat.toFixed(6)+";"+ev.lon.toFixed(6));
+    L.push("X-APPLE-STRUCTURED-LOCATION;VALUE=URI;X-APPLE-RADIUS=72;X-TITLE="+icsEscape(ev.title)+
+           ":geo:"+ev.lat.toFixed(6)+","+ev.lon.toFixed(6));
+  }
+  if(ev.desc) L.push("DESCRIPTION:"+icsEscape(ev.desc));
+  L.push("END:VEVENT","END:VCALENDAR");
+  return L.map(icsFold).join("\r\n")+"\r\n";
+}
+/* Inside the Claude viewer a page cannot start its own download, so ask the
+   platform; everywhere else a Blob link is the normal path. Either can be
+   refused (.ics is not on the viewer's allowed extensions), and then the
+   event text goes to the clipboard instead. */
+const inViewer=()=>!!(window.claude&&typeof window.claude.use==="function");
+async function offerICS(filename,text,btn){
+  let saved=false;
+  if(inViewer()){
+    try{
+      const dl=await claude.use("downloads");
+      if(dl){ await dl.save({filename,data:text}); saved=true }
+    }catch(e){ saved=false }
+  }else{
+    try{
+      const url=URL.createObjectURL(new Blob([text],{type:"text/calendar"}));
+      const a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click();
+      a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000); saved=true;
+    }catch(e){ saved=false }
+  }
+  if(saved){ if(btn)btn.textContent="Saved"; return }
+  let copied=false;
+  try{ await navigator.clipboard.writeText(text); copied=true }catch(e){}
+  const box=document.getElementById("icsout");
+  if(box){ box.hidden=false; box.value=text; if(!copied){ box.focus(); box.select() } }
+  if(btn) btn.textContent = copied ? "Copied to clipboard" : "Copy the text below";
+}
 function homeBase(){ return POIS.find(p=>p.c==="mine"&&p.kind==="stay"); }
 function kmBetween(a,b){
   const R=6371, dLat=(b.lat-a.lat)*Math.PI/180, dLon=(b.lon-a.lon)*Math.PI/180;
@@ -1315,6 +1443,8 @@ function syncMine(){
 }
 async function initStore(){
   SAVED=readLocal(); syncMine();
+  EVENTS=placeEvents(readCalLocal());
+  if(EVENTS.length){ state.day=eventDays()[0]; buildFilters(); paintOverlay(); renderPanel(); }
   let db=null;
   try{ db = (window.claude && typeof claude.use==="function") ? await claude.use("db") : null; }catch(e){ db=null; }
   if(!db) return;
@@ -1330,6 +1460,15 @@ async function initStore(){
       syncMine();
       if(state.tab==="mine"||isPoiKey(state.sel)) renderPanel();
     }, ()=>{ DBNS=null; SAVED=readLocal(); syncMine(); });
+    db.doc("cal/schedule").onSnapshot(snap=>{
+      const d=snap.exists?(snap.data()||{}):{};
+      if(Array.isArray(d.items)){
+        EVENTS=placeEvents(d.items);
+        const days=eventDays(); if(!days.includes(state.day)) state.day=days[0]||null;
+        buildFilters(); paintOverlay();
+        if(state.tab==="mine") renderPanel();
+      }
+    }, ()=>{});
   }catch(e){ DBNS=null; }
 }
 async function addPlace(rec){
@@ -1343,8 +1482,123 @@ async function removePlace(id){
   writeLocal(loc); SAVED=SAVED.filter(x=>String(x.id)!==String(id)); syncMine();
 }
 
+/* =========================================================================
+   Calendar: read a .ics export (Apple Calendar: File > Export, or share a
+   single event) and put its scheduled locations on the map. Apple writes
+   coordinates into X-APPLE-STRUCTURED-LOCATION whenever the location was
+   picked from Maps, so those events land exactly; the rest are matched by
+   name against the guide's places.
+   ========================================================================= */
+let EVENTS=[], calNote="";
+const CAL_LS="cdmx.schedule.v1";
+const unesc=v=>String(v).replace(/\\n/gi,"\n").replace(/\\([;,\\])/g,"$1");
+function firstColon(l){
+  let q=false;
+  for(let i=0;i<l.length;i++){const c=l[i]; if(c==='"')q=!q; else if(c===":"&&!q)return i}
+  return -1;
+}
+function parseDT(v,params){
+  const m=/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?$/.exec(String(v).trim());
+  if(!m)return null;
+  const [,Y,Mo,D,H,Mi,S,Z]=m;
+  const d = Z ? new Date(Date.UTC(+Y,+Mo-1,+D,+H,+Mi,+(S||0)))
+              : new Date(+Y,+Mo-1,+D,+(H||0),+(Mi||0),+(S||0));
+  return {ms:d.getTime(), allday:!H};
+}
+function parseICS(text){
+  const src=String(text).replace(/\r\n/g,"\n").replace(/\r/g,"\n").replace(/\n[ \t]/g,"");
+  const out=[]; let cur=null;
+  for(const ln of src.split("\n")){
+    if(/^BEGIN:VEVENT/i.test(ln)){cur={};continue}
+    if(/^END:VEVENT/i.test(ln)){ if(cur&&cur.ms) out.push(cur); cur=null; continue }
+    if(!cur)continue;
+    const ci=firstColon(ln); if(ci<0)continue;
+    const head=ln.slice(0,ci), val=ln.slice(ci+1), bits=head.split(";");
+    const name=bits[0].toUpperCase(), params={};
+    bits.slice(1).forEach(p=>{const e=p.indexOf("="); if(e>0)params[p.slice(0,e).toUpperCase()]=p.slice(e+1).replace(/^"|"$/g,"")});
+    if(name==="SUMMARY")cur.t=unesc(val).slice(0,120);
+    else if(name==="LOCATION")cur.loc=unesc(val).slice(0,200);
+    else if(name==="UID")cur.uid=val.slice(0,120);
+    else if(name==="DTSTART"){const d=parseDT(val,params); if(d){cur.ms=d.ms;cur.allday=d.allday||params.VALUE==="DATE"}}
+    else if(name==="DTEND"){const d=parseDT(val,params); if(d)cur.endMs=d.ms}
+    else if(name==="GEO"){const g=val.split(/[;,]/).map(Number); if(g.length>1&&isFinite(g[0])&&isFinite(g[1])){cur.lat=g[0];cur.lon=g[1]}}
+    else if(name==="X-APPLE-STRUCTURED-LOCATION"){
+      const m2=/geo:(-?[\d.]+),(-?[\d.]+)/i.exec(val);
+      if(m2){cur.lat=+m2[1];cur.lon=+m2[2]}
+      if(params["X-TITLE"])cur.locTitle=unesc(params["X-TITLE"]).slice(0,120);
+      if(params["X-ADDRESS"]&&!cur.loc)cur.loc=unesc(params["X-ADDRESS"]).slice(0,200);
+    }
+  }
+  return out;
+}
+const norm2=x=>String(x||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+/* an event with no coordinates still lands if its title or location names a place we know */
+function matchPlace(ev){
+  const hay=norm2([ev.loc,ev.locTitle,ev.t].filter(Boolean).join(" | "));
+  if(!hay)return null;
+  let best=null,bl=0;
+  for(const p of POIS){
+    const nm=norm2(p.n);
+    if(nm.length>3&&hay.includes(nm)&&nm.length>bl){best=p;bl=nm.length}
+  }
+  return best;
+}
+function matchTrip(ev){
+  const hay=norm2([ev.loc,ev.locTitle,ev.t].filter(Boolean).join(" | "));
+  return TRIPS.find(t=>{const nm=norm2(t.n.split(" &")[0]); return nm.length>3&&hay.includes(nm)})||null;
+}
+function placeEvents(list){
+  return list.map(ev=>{
+    const e=Object.assign({},ev);
+    if(!isFinite(e.lat)||!isFinite(e.lon)){
+      const p=matchPlace(e);
+      if(p){e.lat=p.lat;e.lon=p.lon;e.viaPin=p.n}
+      else { const t=matchTrip(e); if(t){e.trip=t.n} }
+    }
+    e.a = (isFinite(e.lat)&&isFinite(e.lon)) ? areaAt(e.lat,e.lon) : null;
+    return e;
+  }).sort((a,b)=>a.ms-b.ms);
+}
+const dayKey=ms=>{const d=new Date(ms),p=x=>String(x).padStart(2,"0");
+  return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())};
+const dayLabel=k=>{const [Y,M,D]=k.split("-").map(Number);
+  return new Date(Y,M-1,D).toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})};
+const timeLabel=e=>e.allday?"all day":new Date(e.ms).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+function eventDays(){ const m=[]; EVENTS.forEach(e=>{const k=dayKey(e.ms); if(!m.includes(k))m.push(k)}); return m.sort() }
+function dayEvents(){ return state.day==="*"?EVENTS.slice():EVENTS.filter(e=>dayKey(e.ms)===state.day) }
+
+function readCalLocal(){ try{const v=JSON.parse(localStorage.getItem(CAL_LS)||"null"); return v&&v.items?v.items:[]}catch(e){return[]} }
+function writeCalLocal(items){ try{localStorage.setItem(CAL_LS,JSON.stringify({items,at:Date.now()}))}catch(e){} }
+async function saveEvents(items){
+  EVENTS=placeEvents(items);
+  const days=eventDays();
+  if(!days.includes(state.day)) state.day=days[0]||null;
+  if(DBNS){ try{ await DBNS.doc("cal/schedule").set({items:items.slice(0,400), at:Date.now()}); }catch(e){ writeCalLocal(items) } }
+  else writeCalLocal(items);
+  buildFilters(); paintOverlay(); renderPanel();
+}
+function importICS(text){
+  const raw=parseICS(text);
+  if(!raw.length){ calNote="Nothing readable in that file — it should be a .ics calendar export."; renderPanel(); return }
+  const placed=placeEvents(raw).filter(e=>isFinite(e.lat));
+  calNote=raw.length+" event"+(raw.length===1?"":"s")+" imported · "+placed.length+" with a location on the map";
+  saveEvents(raw); state.showCal=true; fitEvents();
+}
+
 /* ---- drop a pin ---- */
-let addPt=null, delAsk=null;
+let addPt=null, delAsk=null, calAsk=false, pasteOpen=false;
+function readICSFile(f){
+  if(f.size>4e6){ calNote="That file is too large to be a calendar export."; renderPanel(); return }
+  const r=new FileReader();
+  r.onload=()=>{ state.tab="mine"; syncTabs(); importICS(String(r.result||"")); openSheet(); };
+  r.onerror=()=>{ calNote="Could not read that file."; renderPanel() };
+  r.readAsText(f);
+}
+function defaultCalDate(){
+  const d=eventDays(); if(d.length)return d[0];
+  const t=new Date(), p=x=>String(x).padStart(2,"0");
+  return t.getFullYear()+"-"+p(t.getMonth()+1)+"-"+p(t.getDate());
+}
 function startAdd(){
   if(state.view!=="city"){ state.view="city"; applyView(); }
   state.adding=true; addPt=null; delAsk=null;
@@ -1387,6 +1641,41 @@ function renderPanel(){
     await removePlace(id); renderPanel();
   }));
   b.querySelectorAll("[data-delno]").forEach(n=>n.addEventListener("click",e=>{e.stopPropagation();delAsk=null;renderPanel()}));
+  b.querySelectorAll("[data-day]").forEach(n=>n.addEventListener("click",()=>{
+    state.day=n.dataset.day; state.showCal=true; buildFilters(); fitEvents(); renderPanel();
+  }));
+  b.querySelectorAll("[data-ev]").forEach(n=>n.addEventListener("click",()=>selectEvent(+n.dataset.ev)));
+  const fi=b.querySelector("#icsfile"), pick=b.querySelector("#icspick");
+  if(pick&&fi){
+    pick.addEventListener("click",()=>fi.click());
+    fi.addEventListener("change",()=>{ const f=fi.files&&fi.files[0]; if(f)readICSFile(f) });
+  }
+  const pb=b.querySelector("#icspaste");
+  if(pb)pb.addEventListener("click",()=>{ pasteOpen=!pasteOpen; renderPanel();
+    const t=document.getElementById("icspastebox"); if(t&&pasteOpen)t.focus(); });
+  const pg=b.querySelector("#icspastego");
+  if(pg)pg.addEventListener("click",()=>{ const t=b.querySelector("#icspastebox");
+    if(t&&t.value.trim()){ pasteOpen=false; importICS(t.value) } });
+  const cl=b.querySelector("#icsclear"); if(cl)cl.addEventListener("click",()=>{calAsk=true;renderPanel()});
+  const clo=b.querySelector("#icsclearok"); if(clo)clo.addEventListener("click",()=>{
+    calAsk=false; calNote=""; if(isEvtKey(state.sel))state.sel=null; saveEvents([]);
+  });
+  const cln=b.querySelector("#icsclearno"); if(cln)cln.addEventListener("click",()=>{calAsk=false;renderPanel()});
+  const hint=b.querySelector("#calhint");
+  if(hint&&inViewer()) hint.textContent="An .ics with the address and coordinates attached. Downloads are blocked inside the Claude viewer, so this copies the event text to your clipboard — open the guide as a local file if you want the file itself.";
+  const mk=b.querySelector("#cal-make");
+  if(mk&&inViewer()) mk.textContent="Copy calendar event";
+  if(mk)mk.addEventListener("click",()=>{
+    const p=poiByKey(state.sel); if(!p)return;
+    const dv=b.querySelector("#cal-date").value, tv=b.querySelector("#cal-time").value||"12:00";
+    if(!dv)return;
+    const [Y,M,D]=dv.split("-").map(Number), [h,mi]=tv.split(":").map(Number);
+    const startMs=new Date(Y,M-1,D,h||0,mi||0).getTime();
+    const addr=(p.m||"").split(" · ")[0] || ((areaById(p.a)||{}).name||"");
+    const text=buildICS({title:p.n, loc:addr, lat:p.lat, lon:p.lon,
+      startMs, mins:+b.querySelector("#cal-dur").value||120, desc:p.d});
+    offerICS(p.n.replace(/[^\w\- ]+/g,"").slice(0,40).trim().replace(/\s+/g,"-")+".ics", text, mk);
+  });
   b.querySelectorAll("[data-tab]").forEach(n=>n.addEventListener("click",()=>{state.tab=n.dataset.tab;syncTabs();renderPanel()}));
 }
 
@@ -1399,6 +1688,24 @@ function viewDetail(){
       <div class="note"><b>Practical:</b> ${esc(t.m)}</div>
       <div class="sec"><h3>Getting there</h3><div class="desc"><p>Most day trips run from the Terminal del Norte (north), Taxqueña (south) or Observatorio (west) bus stations — ADO and similar lines are comfortable and cheap. For Teotihuacán, Tepoztlán and Puebla, buses go at least hourly; for anything with a hike or a crater, a driver or tour is easier.</p></div></div>
       <div class="foot">Distances and times are typical door-to-door estimates without heavy traffic.</div></div>`;
+  }
+  if(isEvtKey(state.sel)){
+    const e=EVENTS[+state.sel.slice(1)]; if(!e) return welcome();
+    const a=e.a?areaById(e.a):null, near=e.a?poisIn(e.a).slice(0,6):[];
+    return `<div class="hero">
+      <div class="kicker">From your calendar · ${esc(dayLabel(dayKey(e.ms)))}</div>
+      <h2>${esc(e.t||"Event")}</h2>
+      <div class="tags"><span class="tag k">${esc(timeLabel(e))}${e.endMs&&!e.allday?" – "+esc(new Date(e.endMs).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})):""}</span>
+        ${a?`<span class="tag">${esc(a.name)}</span>`:""}</div>
+      </div>
+      <div class="pad">
+        ${e.loc||e.locTitle?`<div class="desc"><p>${esc(e.locTitle||"")}${e.locTitle&&e.loc?" — ":""}${esc(e.loc||"")}</p></div>`:""}
+        ${isFinite(e.lat)?`<div class="note"><b>On the map:</b> ${e.viaPin?"matched to <b>"+esc(e.viaPin)+"</b> by name":"placed from the coordinates in your calendar"}${fromHome(e)?" · "+esc(fromHome(e)):""}</div>
+          <div class="sec"><a class="linkout" href="${mapsURL(e.lat,e.lon,e.t||e.locTitle||"Stop")}" target="_blank" rel="noopener">Open in Apple Maps</a></div>`
+          :(e.trip?`<div class="note"><b>Out of town:</b> this looks like the ${esc(e.trip)} day trip — switch to the <b>Day trips</b> view to see it.</div>`
+            :`<div class="note">This event has no coordinates and no name I can match to a place, so it is not on the map. Picking the location from Maps when you create the event in Apple Calendar is what puts it here.</div>`)}
+        ${near.length?`<div class="sec"><h3>Around it in ${esc(a.name)}</h3>${near.map(poiItem).join("")}</div>`:""}
+      </div>`;
   }
   if(isPoiKey(state.sel)){
     const p=poiByKey(state.sel); if(!p) return welcome();
@@ -1415,6 +1722,18 @@ function viewDetail(){
         <div class="desc"><p>${esc(p.d)}</p></div>
         ${p.m?`<div class="note"><b>${p.mine?"Address":"Good to know"}:</b> ${esc(p.m)}</div>`:""}
         ${p.saved?`<div class="sec"><button class="btn" data-del="${esc(p.sid)}">Remove from my list</button></div>`:""}
+        <div class="sec"><h3>Add to calendar</h3>
+          <div class="cal-out">
+            <input type="date" id="cal-date" value="${esc(defaultCalDate())}" />
+            <input type="time" id="cal-time" value="${(p.c==="star"||p.c==="eat"||p.c==="bar")?"20:00":"11:00"}" />
+            <select id="cal-dur"><option value="60">1 hr</option><option value="90">1½ hr</option>
+              <option value="120" selected>2 hr</option><option value="180">3 hr</option></select>
+            <button class="btn primary" id="cal-make">Download .ics</button>
+            <a class="linkout" href="${mapsURL(p.lat,p.lon,p.n)}" target="_blank" rel="noopener">Open in Apple Maps</a>
+          </div>
+          <textarea class="paste" id="icsout" hidden readonly style="margin-top:8px"></textarea>
+          <div class="synced" id="calhint">An .ics with the address and coordinates attached, so Apple Calendar shows the event on a map.</div>
+        </div>
         <div class="sec"><h3>Also in ${esc(a.name)}</h3>${sib.map(poiItem).join("")||'<div class="empty">Nothing else pinned here yet.</div>'}</div>
       </div>`;
   }
@@ -1499,10 +1818,45 @@ function viewMine(){
     </div></div>` : "";
   const where = DBNS ? "Places you add are saved to this guide, so they follow you between your phone and laptop."
                      : "Places you add are saved in this browser.";
+  const days=eventDays();
+  let placedN=0;
+  const evRows=dayEvents().map(e=>{
+    const has=isFinite(e.lat)&&isFinite(e.lon), num=has?String(++placedN):"·";
+    const a=e.a?areaById(e.a):null;
+    return `<div class="ev${has?"":" nogeo"}" data-ev="${EVENTS.indexOf(e)}">
+      <span class="num">${num}</span>
+      <div style="min-width:0">
+        <div class="tm">${esc(timeLabel(e))}${state.day==="*"?" · "+esc(dayLabel(dayKey(e.ms))):""}</div>
+        <div class="t">${esc(e.t||"Event")}</div>
+        <div class="m">${esc(e.locTitle||e.loc||(e.trip?"day trip · "+e.trip:has?"":"no location"))}${a?" · "+esc(a.name):""}</div>
+      </div></div>`;
+  }).join("");
+  const schedule = `<div class="sec"><h3>Schedule${EVENTS.length?" · "+EVENTS.length+" event"+(EVENTS.length===1?"":"s"):""}</h3>
+    ${EVENTS.length?`<div class="days">
+        ${days.map(k=>`<button data-day="${k}" class="${state.day===k?"on":""}">${esc(dayLabel(k))}</button>`).join("")}
+        <button data-day="*" class="${state.day==="*"?"on":""}">All</button>
+      </div>${evRows||'<div class="empty">Nothing on this day.</div>'}`
+      :`<div class="desc"><p>Export a calendar from Apple Calendar (<b>File &rsaquo; Export</b> on a Mac, or share a single event as .ics) and drop it here. Events whose location you picked from Maps carry their coordinates, so they land exactly; the rest are matched by name against the places in this guide.</p></div>`}
+    <div class="drop" id="icsdrop" style="margin-top:10px">Drop a <b>.ics</b> file anywhere on this page</div>
+    <div class="row" style="display:flex;gap:7px;flex-wrap:wrap;margin-top:9px">
+      <button class="btn" id="icspick">Choose .ics file</button>
+      <button class="btn" id="icspaste">Paste text</button>
+      ${EVENTS.length?(calAsk?`<button class="btn" id="icsclearok">Clear schedule</button><button class="btn" id="icsclearno">Keep</button>`
+        :`<button class="btn" id="icsclear">Clear</button>`):""}
+    </div>
+    <input type="file" id="icsfile" accept=".ics,text/calendar" hidden />
+    <div id="pastewrap" ${pasteOpen?"":"hidden"} style="margin-top:9px">
+      <textarea class="paste" id="icspastebox" placeholder="Paste the contents of a .ics file"></textarea>
+      <button class="btn" id="icspastego" style="margin-top:7px">Import pasted text</button>
+    </div>
+    ${calNote?`<div class="synced">${esc(calNote)}</div>`:""}
+    <div class="synced">Your calendar is read from the file only — nothing is uploaded, and the page never contacts iCloud.</div>
+  </div>`;
   return `<div class="hero"><div class="kicker">Yours</div><h2>My list</h2>
       <div class="sub">Your own pins, drawn as teardrop markers so they stand out from the guide's. ${state.adding?"<b>Now click the map where the place is.</b>":""}</div></div>
     <div class="pad">
       ${form}
+      ${schedule}
       <div class="sec"><h3>Home base</h3>
         ${stays.length?stays.map(mineItem).join(""):
           `<div class="empty">No stay pinned yet. Hit <b>Add a place</b> and click your Airbnb on the map — or send me the address and I'll pin it properly.</div>`}
@@ -1581,6 +1935,14 @@ function buildFilters(){
     });
     f.appendChild(b);
   });
+  if(EVENTS.length){
+    const b=document.createElement("button");
+    b.className="chip"+(state.showCal?"":" off");
+    b.innerHTML=`<span class="sw" style="background:#b45309">${glyph("circle",10,"#fff",6)}</span>Schedule <span style="opacity:.55">${dayEvents().length}</span>`;
+    b.title="Show the selected day from your calendar";
+    b.addEventListener("click",()=>{ state.showCal=!state.showCal; b.classList.toggle("off",!state.showCal); paintOverlay(); });
+    f.appendChild(b);
+  }
 }
 function buildLegend(){
   $("#legRows").innerHTML=Object.keys(CHAR).map(k=>
@@ -1716,6 +2078,22 @@ window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{
   state.fit=Math.min(W/(b.x1-b.x0), availH/(b.y1-b.y0))*(state.view==="city"?0.90:0.84);
   state.k=state.fit*rel; state.tx=W/2-wx*state.k; state.ty=H/2-wy*state.k; applyTransform();
 },120)});
+
+/* drop a .ics anywhere on the page */
+["dragenter","dragover"].forEach(t=>window.addEventListener(t,e=>{
+  if(!e.dataTransfer||![...e.dataTransfer.types].includes("Files"))return;
+  e.preventDefault(); const d=document.getElementById("icsdrop"); if(d)d.classList.add("hot");
+}));
+window.addEventListener("dragleave",e=>{ if(e.relatedTarget)return;
+  const d=document.getElementById("icsdrop"); if(d)d.classList.remove("hot") });
+window.addEventListener("drop",e=>{
+  const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];
+  if(!f)return;
+  e.preventDefault();
+  const d=document.getElementById("icsdrop"); if(d)d.classList.remove("hot");
+  if(/\.ics$/i.test(f.name)||/calendar/i.test(f.type)) readICSFile(f);
+  else { calNote="That is not a .ics calendar file."; state.tab="mine"; syncTabs(); renderPanel(); openSheet(); }
+});
 
 /* ---- boot ---- */
 resize(); buildFilters(); buildLegend(); buildIndex();

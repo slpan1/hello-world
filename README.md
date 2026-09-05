@@ -88,6 +88,25 @@ it falls back to system faces offline.
   Published as an Artifact it saves to the artifact's own store, so pins follow
   you between devices; opened as a local file it falls back to `localStorage`.
 
+## Calendar
+
+There is no free live sync with Apple Calendar — iCloud has no public API, and
+the page makes no network calls at all — so the guide works off the file format
+instead:
+
+- **Calendar to map.** Drop a `.ics` anywhere on the page (Apple Calendar:
+  **File > Export**, or share a single event). Events whose location was picked
+  from Maps carry coordinates in `X-APPLE-STRUCTURED-LOCATION`, so they land
+  exactly; the rest are matched by name against the guide's places and day
+  trips. The schedule appears as day chips in **My list**, and the selected
+  day is drawn on the map as numbered stops joined by a dashed route.
+  Parsing is entirely local — nothing is uploaded.
+- **Map to calendar.** Any place offers an `.ics` with `SUMMARY`, `LOCATION`,
+  `GEO` and Apple's structured location, so the event opens in Apple Calendar
+  with a working map, plus an **Open in Apple Maps** link. Opened as a local
+  file it downloads; inside the Claude viewer downloads are sandboxed, so the
+  event text goes to the clipboard instead.
+
 ## How it's drawn
 There are no map tiles or external libraries. Zone shapes are generated at load
 time: every area carries one or more real lat/lon seed points, and the page
