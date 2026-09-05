@@ -747,9 +747,9 @@ const KINDS={
 };
 
 const MY_PLACES=[
-/* --- home base ---
-{n:"Airbnb", kind:"stay", lat:0, lon:0, d:"Where I'm staying.", m:"street address"},
-*/
+{n:"Airbnb", kind:"stay", lat:19.4392, lon:-99.1894,
+ d:"Home base, on the north edge of Polanco. Masaryk and its restaurants are a 10-minute walk south, Antara is 10 minutes west along the same avenue, and Chapultepec park and the Anthropology Museum are about 25 minutes on foot (or a short Uber) to the south.",
+ m:"Av. Ejército Nacional Mexicano 539, Polanco IV Secc · Metro Polanco (L7), ~12 min walk"},
 {n:"Alo Yoga Antara", kind:"shop", lat:19.4404, lon:-99.1997,
  d:"Premium athleisure flagship inside Antara Fashion Hall, the open-air luxury mall on the north edge of Polanco.",
  m:"Av. Ejército Nacional 843b, Granada"},
@@ -1264,6 +1264,20 @@ function selectTrip(n){
 function clearSel(){ state.sel=null; paintOverlay(); renderPanel(); }
 
 function poisIn(id){ return POIS.filter(p=>p.a===id); }
+function homeBase(){ return POIS.find(p=>p.c==="mine"&&p.kind==="stay"); }
+function kmBetween(a,b){
+  const R=6371, dLat=(b.lat-a.lat)*Math.PI/180, dLon=(b.lon-a.lon)*Math.PI/180;
+  const la1=a.lat*Math.PI/180, la2=b.lat*Math.PI/180;
+  const h=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+/* straight-line distance, then a walking figure padded for the street grid */
+function fromHome(p){
+  const h=homeBase(); if(!h||h===p||!isFinite(p.lat))return "";
+  const km=kmBetween(h,p), mins=Math.round(km*1.25/5*60);
+  const dist=km<1?Math.round(km*1000/50)*50+" m":km.toFixed(1)+" km";
+  return dist+" from your Airbnb"+(mins<=45?" · about "+mins+" min on foot":"");
+}
 function glyph(shape,size,fill,r){
   const vb = shape==="marker" ? "-8 -13.5 16 16" : "-8 -8 16 16";
   return `<svg width="${size}" height="${size}" viewBox="${vb}" aria-hidden="true"><path d="${pinPath(shape,r)}" fill="${fill}"/></svg>`;
@@ -1395,6 +1409,7 @@ function viewDetail(){
       <h2>${esc(p.n)}</h2>
       ${p.c==="star"?`<div class="stars" style="font-size:14px">${starStr(p.s)} MICHELIN</div>`:""}
       <div class="tags"><span class="tag k">${esc(a.name)}</span><span class="tag">${esc(a.es)}</span></div>
+      ${fromHome(p)?`<div class="sub" style="margin-top:8px">${esc(fromHome(p))}</div>`:""}
       </div>
       <div class="pad">
         <div class="desc"><p>${esc(p.d)}</p></div>
@@ -1461,7 +1476,7 @@ function mineItem(p){
     <div style="flex:1;min-width:0">
       <div class="t">${esc(p.n)}<span class="mine-mark" style="background:${k.color}">${esc(k.label)}</span></div>
       ${p.d?`<div class="d">${esc(p.d)}</div>`:""}
-      <div class="m">${a?esc(a.name):"—"}${p.m?" · "+esc(p.m):""}${p.saved?" · saved by you":""}</div>
+      <div class="m">${a?esc(a.name):"—"}${p.m?" · "+esc(p.m):""}${p.saved?" · saved by you":""}${fromHome(p)?" · "+esc(fromHome(p)):""}</div>
       ${asking?`<div class="row" style="display:flex;gap:7px;margin-top:8px">
         <button class="btn" data-delok="${esc(p.sid)}">Remove</button>
         <button class="btn" data-delno="1">Keep</button></div>`:""}
