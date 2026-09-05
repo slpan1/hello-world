@@ -59,8 +59,9 @@ calendar, Slack wins:
 # Mexico City · Area Guide (`mexico-city.html`)
 
 An interactive, self-contained map for learning the neighbourhoods of Mexico City
-before a trip. Open `mexico-city.html` in any browser — no build step, no server,
-no network calls, no dependencies.
+before a trip. Open `mexico-city.html` in any browser — no build step, no server, no libraries.
+The only network request is the Google Fonts stylesheet (Archivo + Newsreader);
+it falls back to system faces offline.
 
 ## What it does
 - **38 clickable zones** covering the city and its inner suburbs, coloured by
