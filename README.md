@@ -79,6 +79,14 @@ it falls back to system faces offline.
 - **Search** across every zone, place and day trip; **All areas** and
   **Highlights** browsers; and a **Basics** tab (altitude, transport, money,
   meal times, Monday museum closures, safety).
+- **My list** — personal pins, drawn as teardrop markers so they read as yours
+  at a glance and coloured by type (stay, shopping, eating, sight...). Curated
+  entries live in the `MY_PLACES` array near the top of the script; each needs a
+  name, a `kind`, lat/lon and a line of description, or a `ref` naming a place
+  the guide already pins. Zones are assigned automatically from the coordinates.
+- **Add a place** — drop a pin by clicking the map, name it and pick a type.
+  Published as an Artifact it saves to the artifact's own store, so pins follow
+  you between devices; opened as a local file it falls back to `localStorage`.
 
 ## How it's drawn
 There are no map tiles or external libraries. Zone shapes are generated at load

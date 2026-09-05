@@ -101,6 +101,33 @@
   .legend.collapsed .rows,.legend.collapsed .hint{display:none}
   .legend h4 span{float:right;cursor:pointer;color:var(--ink2);font-size:11px;margin-left:10px}
 
+  svg#map.adding{cursor:crosshair}
+  .addbar{position:absolute;left:50%;top:56px;transform:translateX(-50%);z-index:22;display:flex;align-items:center;gap:10px;
+    background:#26303f;color:#fff;border-radius:999px;padding:8px 10px 8px 16px;font-size:12.5px;font-weight:600;
+    box-shadow:0 6px 20px rgba(20,25,35,.30);max-width:min(92vw,420px)}
+  .addbar[hidden]{display:none}
+  .addbar button{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);color:#fff;
+    border-radius:999px;padding:4px 11px;font-size:12px;cursor:pointer}
+  .addbar button:hover{background:rgba(255,255,255,.3)}
+  .form{display:flex;flex-direction:column;gap:9px;background:#fff;border:1px solid var(--line2);border-radius:12px;padding:12px}
+  .form label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
+  .form input,.form select,.form textarea{width:100%;border:1px solid var(--line2);border-radius:9px;padding:8px 10px;
+    font:inherit;font-size:13.5px;color:var(--ink);background:#fffdf9;outline:none}
+  .form input:focus,.form select:focus,.form textarea:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(13,127,122,.13)}
+  .form textarea{resize:vertical;min-height:56px}
+  .form .row{display:flex;gap:8px}
+  .btn{border:1px solid var(--line2);background:#fff;color:var(--ink);border-radius:9px;padding:8px 13px;
+    font-size:13px;font-weight:650;cursor:pointer}
+  .btn:hover{border-color:var(--ink2)}
+  .btn.primary{background:var(--accent2);border-color:var(--accent2);color:#fff}
+  .btn.primary:hover{filter:brightness(1.08)}
+  .btn.wide{width:100%;justify-content:center}
+  .item .del{margin-left:auto;align-self:flex-start;border:0;background:none;color:var(--muted);cursor:pointer;
+    font-size:15px;line-height:1;padding:2px 4px;border-radius:6px}
+  .item .del:hover{color:var(--rose);background:rgba(190,52,85,.10)}
+  .mine-mark{display:inline-block;font-size:10px;font-weight:700;color:#fff;background:#4338ca;
+    border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:1px;letter-spacing:.03em}
+  .synced{font-size:10.5px;color:var(--muted);margin-top:8px}
   .tip{position:absolute;z-index:20;background:rgba(30,25,20,.93);color:#fff;font-size:11.5px;padding:5px 9px;
     border-radius:7px;pointer-events:none;transform:translate(-50%,-140%);white-space:nowrap;opacity:0;transition:opacity .1s;
     box-shadow:0 4px 12px rgba(0,0,0,.25);max-width:240px}
@@ -131,7 +158,10 @@
   .results .res .s{font-size:11px;color:var(--muted)}
   .results .none{padding:14px;font-size:12.5px;color:var(--muted);text-align:center}
 
-  .ptabs{display:flex;gap:4px;padding:8px 12px 0;border-bottom:1px solid var(--line);background:var(--paper)}
+  .ptabs{display:flex;gap:4px;padding:8px 12px 0;border-bottom:1px solid var(--line);background:var(--paper);
+    overflow-x:auto;scrollbar-width:none}
+  .ptabs::-webkit-scrollbar{display:none}
+  .ptabs button{white-space:nowrap}
   .ptabs button{border:0;background:none;padding:7px 11px 9px;font-size:12.5px;font-weight:650;color:var(--muted);
     cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-1px}
   .ptabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
@@ -204,7 +234,7 @@
   <header>
     <div class="brand">
       <h1>Ciudad de México</h1>
-      <span class="sub">tap an area to learn it · pins = food, sights, shopping</span>
+      <span class="sub">tap an area to learn it · teardrop pins are yours</span>
     </div>
     <div class="head-sp"></div>
     <div class="viewtabs" id="viewtabs">
@@ -238,6 +268,7 @@
       </svg>
 
       <div class="filters" id="filters"></div>
+      <div class="addbar" id="addbar" hidden><span>Click the map where it is</span><button id="addcancel">Cancel</button></div>
 
       <div class="ctl zoom">
         <button id="zin" title="Zoom in">+</button>
@@ -264,6 +295,7 @@
       </div>
       <div class="ptabs" id="ptabs">
         <button data-tab="detail" class="on">Selected</button>
+        <button data-tab="mine">My list</button>
         <button data-tab="areas">All areas</button>
         <button data-tab="list">Highlights</button>
         <button data-tab="tips">Basics</button>
@@ -555,6 +587,7 @@ const AREAS = [
    2. POINTS OF INTEREST
    ========================================================================= */
 const CATS = {
+  mine:  {label:"My list",         color:"#4338ca", shape:"marker",   n:"Your list"},
   star:  {label:"Michelin",        color:"#b7791f", shape:"star",     n:"Michelin Guide"},
   eat:   {label:"Food & markets",  color:"#c2410c", shape:"circle",   n:"Eating"},
   sight: {label:"Sights",          color:"#2563a8", shape:"triangle", n:"Famous sights"},
@@ -693,6 +726,48 @@ const POIS = [
 {n:"Salón Tenampa", c:"bar", lat:19.4400, lon:-99.1390, a:"lagunilla", d:"The mural-covered cantina on Plaza Garibaldi where mariachi has been played since 1925.", m:"Plaza Garibaldi · cash for songs"},
 {n:"Pulquería Las Duelistas", c:"bar", lat:19.4298, lon:-99.1450, a:"alameda", d:"Psychedelic-painted pulquería serving the fermented agave drink in flavours like oat and guava.", m:"Aranda 30, Centro · afternoons"},
 {n:"Zona Rosa nightlife", c:"bar", lat:19.4258, lon:-99.1650, a:"juarez", d:"Calle Amberes and around: the historic centre of LGBTQ+ nightlife, plus Koreatown karaoke and barbecue.", m:"Metro Insurgentes"}
+];
+
+/* =========================================================================
+   2b. MY PLACES — personal pins. These are drawn as teardrop markers so they
+       stand out from the guide's own pins, and coloured by `kind`.
+       To add one: name, kind, lat/lon (or hand Leon's address over and it
+       gets added here), a line of description and the address in `m`.
+       `ref` instead of lat/lon flags a place the guide already pins.
+   ========================================================================= */
+const KINDS={
+  stay:  {label:"Stay",     color:"#4338ca"},
+  shop:  {label:"Shopping", color:"#0d7f7a"},
+  eat:   {label:"Eating",   color:"#c2410c"},
+  sight: {label:"Sight",    color:"#2563a8"},
+  museum:{label:"Museum",   color:"#7c3f9e"},
+  bar:   {label:"Bar",      color:"#be3455"},
+  park:  {label:"Outdoors", color:"#2f7d4f"},
+  other: {label:"Place",    color:"#4338ca"}
+};
+
+const MY_PLACES=[
+/* --- home base ---
+{n:"Airbnb", kind:"stay", lat:0, lon:0, d:"Where I'm staying.", m:"street address"},
+*/
+{n:"Alo Yoga Antara", kind:"shop", lat:19.4404, lon:-99.1997,
+ d:"Premium athleisure flagship inside Antara Fashion Hall, the open-air luxury mall on the north edge of Polanco.",
+ m:"Av. Ejército Nacional 843b, Granada"},
+{n:"Lululemon Polanco", kind:"shop", lat:19.4333, lon:-99.1928,
+ d:"Standalone premium activewear store, a block off Presidente Masaryk.",
+ m:"Alejandro Dumas 135, Polanco IV"},
+{n:"On Store Masaryk", kind:"shop", lat:19.4325, lon:-99.1938,
+ d:"Sleek, tech-forward running and movement apparel store, on the main luxury strip.",
+ m:"Av. Pdte. Masaryk 295, Polanco IV"},
+{n:"JET Masaryk", kind:"shop", lat:19.4327, lon:-99.1985,
+ d:"High-end luxury streetwear and avant-garde fashion boutique just off Masaryk.",
+ m:"Calderón de la Barca 97, Polanco III"},
+{n:"Alo Yoga Artz Pedregal", kind:"shop", lat:19.3057, lon:-99.2131,
+ d:"Luxury fitness fashion in Artz Pedregal, the upscale mall in the wealthy far south of the city.",
+ m:"Periférico Sur 3720, Jardines del Pedregal"},
+{ref:"El Palacio de Hierro Polanco", kind:"shop",
+ d:"Flagship luxury department store — 'the palace of palaces' — with dedicated contemporary and activewear floors.",
+ m:"Av. Moliere 222, Polanco II"}
 ];
 
 /* =========================================================================
@@ -949,6 +1024,10 @@ function pinPath(shape,r){
     case "diamond":return `M0 ${-r*1.1}L${r*1.02} 0L0 ${r*1.1}L${-r*1.02} 0Z`;
     case "pent":{let d="";for(let i=0;i<5;i++){const a=-Math.PI/2+i*2*Math.PI/5;
       d+=(i?"L":"M")+(Math.cos(a)*r).toFixed(2)+" "+(Math.sin(a)*r).toFixed(2)}return d+"Z"}
+    case "marker":{const R=r*0.92;
+      return `M0 0C${(-0.62*R).toFixed(2)} ${(-1.0*R).toFixed(2)},${(-R).toFixed(2)} ${(-1.45*R).toFixed(2)},${(-R).toFixed(2)} ${(-1.85*R).toFixed(2)}`+
+        `A${R.toFixed(2)} ${R.toFixed(2)} 0 1 1 ${R.toFixed(2)} ${(-1.85*R).toFixed(2)}`+
+        `C${R.toFixed(2)} ${(-1.45*R).toFixed(2)},${(0.62*R).toFixed(2)} ${(-1.0*R).toFixed(2)},0 0Z`}
     case "hex":{let d="";for(let i=0;i<6;i++){const a=i*Math.PI/3;
       d+=(i?"L":"M")+(Math.cos(a)*r).toFixed(2)+" "+(Math.sin(a)*r).toFixed(2)}return d+"Z"}
     default:return `M${-r} 0a${r} ${r} 0 1 0 ${2*r} 0a${r} ${r} 0 1 0 ${-2*r} 0Z`;
@@ -1017,7 +1096,13 @@ function hitRect(r,list){
   for(const q of list) if(!(r[2]<q[0]||r[0]>q[2]||r[3]<q[1]||r[1]>q[3])) return true;
   return false;
 }
-const CATORDER=["star","sight","museum","shop","bar","eat","park"];
+const CATORDER=["mine","star","sight","museum","shop","bar","eat","park"];
+function isPoiKey(k){return !!k&&(k[0]==="#"||k[0]==="$")}
+function areaAt(lat,lon){
+  const p=px(lat,lon); let best=null,bd=1e18;
+  for(const st of SITES){const d=(st.x-p.x)**2+(st.y-p.y)**2; if(d<bd){bd=d;best=st}}
+  return best?best.id:null;
+}
 
 function paintOverlay(){
   gLabels.innerHTML=""; gPins.innerHTML="";
@@ -1045,7 +1130,7 @@ function paintOverlay(){
     /* --- pins --- */
     const pins=POIS.filter(p=>state.cats.has(p.c));
     const aaKey=activeArea();
-    const rank=p=>(state.sel===p._key?4:0)+(aaKey&&p.a===aaKey?2:0)+(p.c==="star"?1:0);
+    const rank=p=>(state.sel===p._key?8:0)+(p.c==="mine"?4:0)+(aaKey&&p.a===aaKey?2:0)+(p.c==="star"?1:0);
     pins.sort((a,b)=>{
       const d=rank(b)-rank(a); if(d)return d;
       return CATORDER.indexOf(a.c)-CATORDER.indexOf(b.c);
@@ -1054,22 +1139,24 @@ function paintOverlay(){
     pins.forEach(p=>{
       const w=px(p.lat,p.lon), [sx,sy]=S2(w.x,w.y);
       if(sx<-20||sx>W+20||sy<-20||sy>H+20)return;
-      const isSel=state.sel===p._key, inArea=aaKey&&p.a===aaKey;
+      const isSel=state.sel===p._key, inArea=aaKey&&p.a===aaKey, isMine=p.c==="mine";
       const rr=isSel?8:6;
-      const box=[sx-rr-2,sy-rr-2,sx+rr+2,sy+rr+2];
-      if(!isSel && !inArea && hitRect(box,pinTaken))return;
+      const box=isMine?[sx-rr-2,sy-rr*3,sx+rr+2,sy+3]:[sx-rr-2,sy-rr-2,sx+rr+2,sy+rr+2];
+      if(!isSel && !inArea && !isMine && hitRect(box,pinTaken))return;
       pinTaken.push(box);
       const g=el("g",{class:"pin"+(isSel?" sel":""), transform:`translate(${sx.toFixed(1)} ${sy.toFixed(1)})`});
-      const cat=CATS[p.c];
-      g.appendChild(el("path",{d:pinPath(cat.shape,rr), fill:cat.color, stroke:"#fff","stroke-width":isSel?2.2:1.5, filter:"url(#soft)"}));
+      const cat=CATS[p.c], col=isMine?((KINDS[p.kind]||KINDS.other).color):cat.color;
+      g.appendChild(el("path",{d:pinPath(cat.shape,rr), fill:col, stroke:isMine?"#221c4d":"#fff",
+        "stroke-width":isSel?2.2:(isMine?1.3:1.5), filter:"url(#soft)"}));
+      if(isMine) g.appendChild(el("circle",{cx:0,cy:(-1.70*rr).toFixed(2),r:(rr*0.33).toFixed(2),fill:"#fff",opacity:".95"}));
       if(p.c==="star"&&p.s===2) g.appendChild(el("circle",{cx:0,cy:0,r:2.1,fill:"#fff",opacity:".92"}));
       g.style.cursor="pointer";
       g.addEventListener("click",e=>{e.stopPropagation();selectPoi(p._key)});
-      g.addEventListener("pointerenter",e=>showTip(e,`<b>${p.n}</b>${p.c==="star"?' <i>'+(p.s===2?"★★":p.s===1?"★":"was ★")+'</i>':""}`));
+      g.addEventListener("pointerenter",e=>showTip(e,`<b>${p.n}</b>${p.c==="star"?' <i>'+(p.s===2?"★★":p.s===1?"★":"was ★")+'</i>':p.mine?' <i>on my list</i>':""}`));
       g.addEventListener("pointermove",moveTip);
       g.addEventListener("pointerleave",hideTip);
       gPins.appendChild(g);
-      if(showNames||isSel||(inArea&&state.k/state.fit>1.8)){
+      if(showNames||isSel||isMine||(inArea&&state.k/state.fit>1.8)){
         const fs=isSel?11.5:10.2, wpx=p.n.length*fs*0.52;
         const lr=[sx-wpx/2-2, sy+rr+3.5, sx+wpx/2+2, sy+rr+fs+5];
         if(!hitRect(lr,taken)&&!hitRect(lr,pinTaken)){
@@ -1132,13 +1219,23 @@ function hideTip(){ tipEl.classList.remove("on"); }
 /* =========================================================================
    8. SELECTION + PANEL
    ========================================================================= */
-POIS.forEach((p,i)=>{p._key="#"+i});
+/* fold personal places into the pin set */
+MY_PLACES.forEach(m=>{
+  if(m.ref){
+    const p=POIS.find(x=>x.n===m.ref);
+    if(p){ p.mine=true; p.kind=m.kind||p.c; p.c="mine"; if(m.d)p.d=m.d; if(m.m)p.m=m.m; }
+    return;
+  }
+  POIS.push({n:m.n, c:"mine", kind:m.kind||"other", lat:m.lat, lon:m.lon,
+             d:m.d||"", m:m.m||"", mine:true, curated:true});
+});
+POIS.forEach((p,i)=>{ p._key="#"+i; if(!p.a) p.a=areaAt(p.lat,p.lon); });
 const areaById=id=>AREAS.find(a=>a.id===id);
-const poiByKey=k=>POIS[+k.slice(1)];
+const poiByKey=k=>POIS.find(p=>p._key===k);
 const tripByName=n=>TRIPS.find(t=>t.n===n);
 function activeArea(){
   if(!state.sel)return null;
-  if(state.sel.charAt(0)==="#")return poiByKey(state.sel).a;
+  if(isPoiKey(state.sel)){const p=poiByKey(state.sel); return p?p.a:null}
   if(state.sel.charAt(0)==="@")return null;
   return state.sel;
 }
@@ -1167,8 +1264,12 @@ function selectTrip(n){
 function clearSel(){ state.sel=null; paintOverlay(); renderPanel(); }
 
 function poisIn(id){ return POIS.filter(p=>p.a===id); }
+function glyph(shape,size,fill,r){
+  const vb = shape==="marker" ? "-8 -13.5 16 16" : "-8 -8 16 16";
+  return `<svg width="${size}" height="${size}" viewBox="${vb}" aria-hidden="true"><path d="${pinPath(shape,r)}" fill="${fill}"/></svg>`;
+}
 function catIcon(c){ const t=CATS[c];
-  return `<span class="ic" style="background:${t.color}"><svg width="14" height="14" viewBox="-8 -8 16 16"><path d="${pinPath(t.shape,5.4)}" fill="#fff"/></svg></span>`; }
+  return `<span class="ic" style="background:${t.color}">${glyph(t.shape,14,"#fff",5.4)}</span>`; }
 
 function poiItem(p){
   return `<div class="item" data-poi="${p._key}">${catIcon(p.c)}<div>
@@ -1182,9 +1283,69 @@ function areaItem(a){
     <div class="m">${esc(a.es)} · ${n} place${n===1?"":"s"} pinned</div></div></div>`;
 }
 
+/* ---- saved places: synced through the artifact store when available,
+        otherwise kept in this browser ---- */
+const LS_KEY="cdmx.myplaces.v1";
+let DBNS=null, SAVED=[], migrated=false;
+const readLocal=()=>{try{return JSON.parse(localStorage.getItem(LS_KEY)||"[]")}catch(e){return[]}};
+const writeLocal=v=>{try{localStorage.setItem(LS_KEY,JSON.stringify(v))}catch(e){}};
+
+function syncMine(){
+  for(let i=POIS.length-1;i>=0;i--) if(POIS[i].saved) POIS.splice(i,1);
+  SAVED.forEach(r=>{
+    const lat=+r.lat, lon=+r.lon; if(!isFinite(lat)||!isFinite(lon))return;
+    POIS.push({n:r.n||"Untitled", c:"mine", kind:KINDS[r.kind]?r.kind:"other", lat, lon,
+      d:r.d||"", m:r.m||"", mine:true, saved:true, sid:r.id, _key:"$"+r.id, a:areaAt(lat,lon)});
+  });
+  buildFilters(); buildIndex(); paintOverlay();
+}
+async function initStore(){
+  SAVED=readLocal(); syncMine();
+  let db=null;
+  try{ db = (window.claude && typeof claude.use==="function") ? await claude.use("db") : null; }catch(e){ db=null; }
+  if(!db) return;
+  DBNS=db;
+  try{
+    db.collection("places").onSnapshot(snap=>{
+      SAVED=snap.docs.map(d=>Object.assign({id:d.id}, d.data()||{}));
+      if(!migrated){
+        migrated=true;
+        const loc=readLocal();
+        if(loc.length){ writeLocal([]); loc.forEach(r=>{ const {id,...rest}=r; db.collection("places").add(rest).catch(()=>{}) }); }
+      }
+      syncMine();
+      if(state.tab==="mine"||isPoiKey(state.sel)) renderPanel();
+    }, ()=>{ DBNS=null; SAVED=readLocal(); syncMine(); });
+  }catch(e){ DBNS=null; }
+}
+async function addPlace(rec){
+  if(DBNS){ try{ await DBNS.collection("places").add(rec); return }catch(e){} }
+  const loc=readLocal(); loc.push(Object.assign({id:"l"+Date.now().toString(36)},rec));
+  writeLocal(loc); SAVED=loc; syncMine();
+}
+async function removePlace(id){
+  if(DBNS && !String(id).startsWith("l")){ try{ await DBNS.collection("places").doc(String(id)).delete(); return }catch(e){} }
+  const loc=readLocal().filter(x=>String(x.id)!==String(id));
+  writeLocal(loc); SAVED=SAVED.filter(x=>String(x.id)!==String(id)); syncMine();
+}
+
+/* ---- drop a pin ---- */
+let addPt=null, delAsk=null;
+function startAdd(){
+  if(state.view!=="city"){ state.view="city"; applyView(); }
+  state.adding=true; addPt=null; delAsk=null;
+  document.getElementById("addbar").hidden=false; svg.classList.add("adding");
+  if(window.innerWidth<=860){ state.panelOpen=false; document.getElementById("panel").classList.remove("open"); }
+}
+function cancelAdd(){
+  state.adding=false; addPt=null;
+  document.getElementById("addbar").hidden=true; svg.classList.remove("adding");
+  renderPanel();
+}
 function renderPanel(){
   const b=$("#pbody");
-  if(state.tab==="areas")      b.innerHTML=viewAreas();
+  if(state.tab==="mine")       b.innerHTML=viewMine();
+  else if(state.tab==="areas") b.innerHTML=viewAreas();
   else if(state.tab==="list")  b.innerHTML=viewHighlights();
   else if(state.tab==="tips")  b.innerHTML=viewTips();
   else                         b.innerHTML=viewDetail();
@@ -1192,6 +1353,26 @@ function renderPanel(){
   b.querySelectorAll("[data-poi]").forEach(n=>n.addEventListener("click",()=>selectPoi(n.dataset.poi)));
   b.querySelectorAll("[data-area]").forEach(n=>n.addEventListener("click",()=>selectArea(n.dataset.area)));
   b.querySelectorAll("[data-trip]").forEach(n=>n.addEventListener("click",()=>selectTrip(n.dataset.trip)));
+  const add=b.querySelector("#addbtn"); if(add)add.addEventListener("click",startAdd);
+  const sv=b.querySelector("#saveplace");
+  if(sv)sv.addEventListener("click",async()=>{
+    const nm=(b.querySelector("#pl-name").value||"").trim();
+    if(!nm){ b.querySelector("#pl-name").focus(); return }
+    const rec={n:nm.slice(0,80), kind:b.querySelector("#pl-kind").value,
+      d:(b.querySelector("#pl-note").value||"").trim().slice(0,400),
+      lat:+addPt.lat.toFixed(5), lon:+addPt.lon.toFixed(5), ts:Date.now()};
+    addPt=null; await addPlace(rec); renderPanel();
+  });
+  const cx=b.querySelector("#cancelplace"); if(cx)cx.addEventListener("click",()=>{addPt=null;renderPanel()});
+  b.querySelectorAll("[data-del]").forEach(n=>n.addEventListener("click",e=>{
+    e.stopPropagation(); delAsk=n.dataset.del; state.tab="mine"; syncTabs(); renderPanel();
+  }));
+  b.querySelectorAll("[data-delok]").forEach(n=>n.addEventListener("click",async e=>{
+    e.stopPropagation(); const id=n.dataset.delok; delAsk=null;
+    if(state.sel==="$"+id) state.sel=null;
+    await removePlace(id); renderPanel();
+  }));
+  b.querySelectorAll("[data-delno]").forEach(n=>n.addEventListener("click",e=>{e.stopPropagation();delAsk=null;renderPanel()}));
   b.querySelectorAll("[data-tab]").forEach(n=>n.addEventListener("click",()=>{state.tab=n.dataset.tab;syncTabs();renderPanel()}));
 }
 
@@ -1205,18 +1386,20 @@ function viewDetail(){
       <div class="sec"><h3>Getting there</h3><div class="desc"><p>Most day trips run from the Terminal del Norte (north), Taxqueña (south) or Observatorio (west) bus stations — ADO and similar lines are comfortable and cheap. For Teotihuacán, Tepoztlán and Puebla, buses go at least hourly; for anything with a hike or a crater, a driver or tour is easier.</p></div></div>
       <div class="foot">Distances and times are typical door-to-door estimates without heavy traffic.</div></div>`;
   }
-  if(state.sel.charAt(0)==="#"){
-    const p=poiByKey(state.sel), a=areaById(p.a), sib=poisIn(p.a).filter(q=>q!==p).slice(0,8);
+  if(isPoiKey(state.sel)){
+    const p=poiByKey(state.sel); if(!p) return welcome();
+    const a=areaById(p.a), sib=poisIn(p.a).filter(q=>q!==p).slice(0,8);
     return `<div class="hero">
       <button class="backlink" data-area="${a.id}">&larr; ${esc(a.name)}</button>
-      <div class="kicker">${esc(CATS[p.c].n)}</div>
+      <div class="kicker">${esc(CATS[p.c].n)}${p.mine&&KINDS[p.kind]?" · "+esc(KINDS[p.kind].label):""}</div>
       <h2>${esc(p.n)}</h2>
       ${p.c==="star"?`<div class="stars" style="font-size:14px">${starStr(p.s)} MICHELIN</div>`:""}
       <div class="tags"><span class="tag k">${esc(a.name)}</span><span class="tag">${esc(a.es)}</span></div>
       </div>
       <div class="pad">
         <div class="desc"><p>${esc(p.d)}</p></div>
-        ${p.m?`<div class="note"><b>Good to know:</b> ${esc(p.m)}</div>`:""}
+        ${p.m?`<div class="note"><b>${p.mine?"Address":"Good to know"}:</b> ${esc(p.m)}</div>`:""}
+        ${p.saved?`<div class="sec"><button class="btn" data-del="${esc(p.sid)}">Remove from my list</button></div>`:""}
         <div class="sec"><h3>Also in ${esc(a.name)}</h3>${sib.map(poiItem).join("")||'<div class="empty">Nothing else pinned here yet.</div>'}</div>
       </div>`;
   }
@@ -1268,6 +1451,51 @@ function regionWelcome(){
       <div class="sec"><h3>Classic first choices</h3>${first.map(nm=>tripItem(tripByName(nm))).join("")}</div>
       <div class="sec"><h3>Everything else</h3>${TRIPS.filter(t=>!first.includes(t.n)).map(tripItem).join("")}</div>
       <div class="foot">Times are typical door-to-door estimates without heavy traffic.</div>
+    </div>`;
+}
+function mineItem(p){
+  const a=areaById(p.a), k=KINDS[p.kind]||KINDS.other;
+  const asking = p.saved && delAsk===String(p.sid);
+  return `<div class="item" ${asking?"":`data-poi="${p._key}"`}>
+    <span class="ic" style="background:${k.color}">${glyph("marker",14,"#fff",5)}</span>
+    <div style="flex:1;min-width:0">
+      <div class="t">${esc(p.n)}<span class="mine-mark" style="background:${k.color}">${esc(k.label)}</span></div>
+      ${p.d?`<div class="d">${esc(p.d)}</div>`:""}
+      <div class="m">${a?esc(a.name):"—"}${p.m?" · "+esc(p.m):""}${p.saved?" · saved by you":""}</div>
+      ${asking?`<div class="row" style="display:flex;gap:7px;margin-top:8px">
+        <button class="btn" data-delok="${esc(p.sid)}">Remove</button>
+        <button class="btn" data-delno="1">Keep</button></div>`:""}
+    </div>
+    ${p.saved&&!asking?`<button class="del" data-del="${esc(p.sid)}" title="Remove">&times;</button>`:""}
+  </div>`;
+}
+function viewMine(){
+  const mine=POIS.filter(p=>p.c==="mine");
+  const stays=mine.filter(p=>p.kind==="stay");
+  const rest=mine.filter(p=>p.kind!=="stay");
+  const kinds=Object.keys(KINDS).filter(k=>k!=="stay"&&rest.some(p=>p.kind===k));
+  const form = addPt ? `<div class="sec"><h3>New place</h3><div class="form">
+      <div><label for="pl-name">Name</label><input id="pl-name" type="text" placeholder="e.g. Airbnb" autocomplete="off" /></div>
+      <div><label for="pl-kind">Type</label><select id="pl-kind">${Object.keys(KINDS).map(k=>
+        `<option value="${k}"${k==="stay"?" selected":""}>${KINDS[k].label}</option>`).join("")}</select></div>
+      <div><label for="pl-note">Note (optional)</label><textarea id="pl-note" placeholder="Anything worth remembering"></textarea></div>
+      <div class="row"><button class="btn primary" id="saveplace">Save pin</button><button class="btn" id="cancelplace">Cancel</button></div>
+      <div class="m">Dropped at ${addPt.lat.toFixed(4)}, ${addPt.lon.toFixed(4)} · ${esc((areaById(areaAt(addPt.lat,addPt.lon))||{}).name||"outside the mapped area")}</div>
+    </div></div>` : "";
+  const where = DBNS ? "Places you add are saved to this guide, so they follow you between your phone and laptop."
+                     : "Places you add are saved in this browser.";
+  return `<div class="hero"><div class="kicker">Yours</div><h2>My list</h2>
+      <div class="sub">Your own pins, drawn as teardrop markers so they stand out from the guide's. ${state.adding?"<b>Now click the map where the place is.</b>":""}</div></div>
+    <div class="pad">
+      ${form}
+      <div class="sec"><h3>Home base</h3>
+        ${stays.length?stays.map(mineItem).join(""):
+          `<div class="empty">No stay pinned yet. Hit <b>Add a place</b> and click your Airbnb on the map — or send me the address and I'll pin it properly.</div>`}
+      </div>
+      ${kinds.map(k=>`<div class="sec"><h3>${esc(KINDS[k].label)} · ${rest.filter(p=>p.kind===k).length}</h3>
+        ${rest.filter(p=>p.kind===k).map(mineItem).join("")}</div>`).join("")}
+      ${addPt?"":`<div class="sec"><button class="btn wide primary" id="addbtn">Add a place</button>
+        <div class="synced">${where}</div></div>`}
     </div>`;
 }
 function viewAreas(){
@@ -1331,7 +1559,7 @@ function buildFilters(){
     const t=CATS[c], n=POIS.filter(p=>p.c===c).length;
     const b=document.createElement("button");
     b.className="chip"+(state.cats.has(c)?"":" off");
-    b.innerHTML=`<span class="sw" style="background:${t.color}"><svg width="10" height="10" viewBox="-8 -8 16 16"><path d="${pinPath(t.shape,6)}" fill="#fff"/></svg></span>${t.label} <span style="opacity:.55">${n}</span>`;
+    b.innerHTML=`<span class="sw" style="background:${t.color}">${glyph(t.shape,10,"#fff",6)}</span>${t.label} <span style="opacity:.55">${n}</span>`;
     b.addEventListener("click",()=>{
       if(state.cats.has(c))state.cats.delete(c); else state.cats.add(c);
       b.classList.toggle("off",!state.cats.has(c)); paintOverlay();
@@ -1352,9 +1580,12 @@ function syncTabs(){ document.querySelectorAll("#ptabs button").forEach(b=>b.cla
 /* ---- search ---- */
 const INDEX=[];
 function buildIndex(){
+  INDEX.length=0;
   AREAS.forEach(a=>INDEX.push({t:a.name,s:`${a.es} · ${CHAR[a.char].label}`,k:"area",id:a.id,col:CHAR[a.char].fill,ch:a.name.charAt(0)}));
   POIS.forEach(p=>{const a=areaById(p.a);
-    INDEX.push({t:p.n,s:`${CATS[p.c].label}${a?" · "+a.name:""}`,k:"poi",id:p._key,col:CATS[p.c].color,shape:CATS[p.c].shape})});
+    const lab=p.c==="mine"?("My list · "+((KINDS[p.kind]||KINDS.other).label)):CATS[p.c].label;
+    INDEX.push({t:p.n,s:`${lab}${a?" · "+a.name:""}`,k:"poi",id:p._key,
+      col:p.c==="mine"?((KINDS[p.kind]||KINDS.other).color):CATS[p.c].color,shape:CATS[p.c].shape})});
   TRIPS.forEach(t=>INDEX.push({t:t.n,s:`Day trip · ${t.t}`,k:"trip",id:t.n,col:CATS[t.c].color,shape:CATS[t.c].shape}));
 }
 function runSearch(q){
@@ -1366,7 +1597,7 @@ function runSearch(q){
       return i<0?null:{it,r:(i===0?0:1)+(it.k==="area"?0:0.5)}}).filter(Boolean)
     .sort((a,b)=>a.r-b.r).slice(0,14).map(h=>h.it);
   box.innerHTML=hits.length?hits.map(h=>`<div class="res" data-k="${h.k}" data-id="${esc(h.id)}">
-      <span class="ic" style="background:${h.col}">${h.shape?`<svg width="12" height="12" viewBox="-8 -8 16 16"><path d="${pinPath(h.shape,5.6)}" fill="#fff"/></svg>`:esc(h.ch||"")}</span>
+      <span class="ic" style="background:${h.col}">${h.shape?glyph(h.shape,12,"#fff",5.6):esc(h.ch||"")}</span>
       <div><div class="t">${esc(h.t)}</div><div class="s">${esc(h.s)}</div></div></div>`).join("")
     :`<div class="none">Nothing matches “${esc(q)}”.</div>`;
   box.classList.add("on");
@@ -1417,6 +1648,17 @@ svg.addEventListener("pointermove",e=>{
 });
 ["pointerup","pointercancel","pointerleave"].forEach(t=>svg.addEventListener(t,e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null}));
 
+svg.addEventListener("click",e=>{
+  if(!state.adding)return;
+  e.stopPropagation(); e.preventDefault();
+  if(moved)return;
+  const r=svg.getBoundingClientRect();
+  const wx=(e.clientX-r.left-state.tx)/state.k, wy=(e.clientY-r.top-state.ty)/state.k;
+  addPt={lat:LAT0-wy/SC, lon:LON0+wx/(KX*SC)};
+  state.adding=false; $("#addbar").hidden=true; svg.classList.remove("adding");
+  state.tab="mine"; syncTabs(); renderPanel(); openSheet();
+},true);
+$("#addcancel").addEventListener("click",e=>{e.stopPropagation();cancelAdd()});
 $("#zin").addEventListener("click",()=>zoomAt(W/2,H/2,1.45));
 $("#zout").addEventListener("click",()=>zoomAt(W/2,H/2,1/1.45));
 let fitMode=0;
@@ -1463,6 +1705,7 @@ window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{
 /* ---- boot ---- */
 resize(); buildFilters(); buildLegend(); buildIndex();
 drawCity(); fitView(); fitCore(); syncTabs(); renderPanel();
+initStore();
 </script>
 </body>
 </html>
