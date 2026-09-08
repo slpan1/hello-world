@@ -30,7 +30,7 @@
 
   /* ---------- shell ---------- */
   .app{display:flex;flex-direction:column;height:100dvh;width:100%}
-  header{display:flex;align-items:center;gap:12px;padding:10px 14px;
+  header{display:flex;align-items:center;gap:12px;padding:max(10px,env(safe-area-inset-top)) 14px 10px;
     background:linear-gradient(100deg,#0f766e 0%,#166b5c 42%,#b45309 100%);
     color:#fff;box-shadow:0 3px 14px rgba(60,40,20,.22);z-index:30;flex:none}
   .brand{display:flex;align-items:baseline;gap:9px;min-width:0}
@@ -2094,6 +2094,64 @@ window.addEventListener("drop",e=>{
   if(/\.ics$/i.test(f.name)||/calendar/i.test(f.type)) readICSFile(f);
   else { calNote="That is not a .ics calendar file."; state.tab="mine"; syncTabs(); renderPanel(); openSheet(); }
 });
+
+/* =========================================================================
+   Home-screen install: draw the icon rather than shipping a binary, and
+   declare the bits iOS and Android read when you "Add to Home Screen".
+   Only meaningful when the page is served top level (a saved copy, or a
+   static host) — inside the Claude viewer the surrounding page owns these.
+   ========================================================================= */
+function appIcon(size){
+  const c=document.createElement("canvas"); c.width=c.height=size;
+  const x=c.getContext("2d"), u=size/180;
+  const poly=(pts,fill)=>{x.beginPath();pts.forEach((p,i)=>x[i?"lineTo":"moveTo"](p[0]*u,p[1]*u));x.closePath();x.fillStyle=fill;x.fill()};
+  x.fillStyle="#f2e8d8"; x.fillRect(0,0,size,size);
+  poly([[0,0],[96,0],[124,66],[0,124]],"#e0c274");
+  poly([[96,0],[180,0],[180,88],[124,66]],"#e0a06a");
+  poly([[124,66],[180,88],[180,180],[92,180]],"#e08ba0");
+  poly([[0,124],[92,180],[0,180]],"#8fc79b");
+  x.strokeStyle="#fffaf2"; x.lineWidth=5*u; x.lineCap="round";
+  x.beginPath(); x.moveTo(0,124*u); x.lineTo(124*u,66*u); x.lineTo(180*u,88*u); x.stroke();
+  x.beginPath(); x.moveTo(96*u,0); x.lineTo(124*u,66*u); x.lineTo(92*u,180*u); x.stroke();
+  /* the marker */
+  const cx=92*u, ty=134*u, R=27*u;
+  x.beginPath();
+  x.moveTo(cx,ty);
+  x.bezierCurveTo(cx-0.62*R,ty-1.0*R, cx-R,ty-1.45*R, cx-R,ty-1.85*R);
+  x.arc(cx,ty-1.85*R,R,Math.PI,0,false);
+  x.bezierCurveTo(cx+R,ty-1.45*R, cx+0.62*R,ty-1.0*R, cx,ty);
+  x.closePath();
+  x.fillStyle="#3b32a3"; x.shadowColor="rgba(40,30,15,.35)"; x.shadowBlur=7*u; x.shadowOffsetY=2*u; x.fill();
+  x.shadowColor="transparent";
+  x.beginPath(); x.arc(cx,ty-1.85*R,R*0.34,0,7); x.fillStyle="#fff"; x.fill();
+  return c.toDataURL("image/png");
+}
+function installMeta(){
+  try{
+    if(window.top!==window.self) return;          // inside a viewer the host owns the icon
+    const head=document.head||document.documentElement;
+    const meta=(name,content,attr)=>{const m=document.createElement("meta");
+      m.setAttribute(attr||"name",name); m.setAttribute("content",content); head.appendChild(m)};
+    const icon=appIcon(180);
+    [["apple-touch-icon",icon,"180x180"],["icon",icon,"180x180"]].forEach(([rel,href,sizes])=>{
+      const l=document.createElement("link"); l.rel=rel; l.href=href; if(sizes)l.sizes=sizes; head.appendChild(l);
+    });
+    meta("apple-mobile-web-app-capable","yes");
+    meta("mobile-web-app-capable","yes");
+    meta("apple-mobile-web-app-title","CDMX Guide");
+    meta("application-name","CDMX Guide");
+    meta("apple-mobile-web-app-status-bar-style","default");
+    meta("theme-color","#0f766e");
+    const man={name:"Mexico City Area Guide", short_name:"CDMX Guide", display:"standalone",
+      background_color:"#f6efe4", theme_color:"#0f766e", start_url:location.href, scope:"./",
+      icons:[{src:icon,sizes:"180x180",type:"image/png",purpose:"any"},
+             {src:appIcon(512),sizes:"512x512",type:"image/png",purpose:"any"}]};
+    const l=document.createElement("link"); l.rel="manifest";
+    l.href=URL.createObjectURL(new Blob([JSON.stringify(man)],{type:"application/manifest+json"}));
+    head.appendChild(l);
+  }catch(e){}
+}
+installMeta();
 
 /* ---- boot ---- */
 resize(); buildFilters(); buildLegend(); buildIndex();
